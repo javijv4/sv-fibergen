@@ -1,0 +1,6 @@
+*.bin
+*.dat
+fibersLong.vtu
+fibersNormal.vtu
+fibersSheet.vtu
+check*.vtu
