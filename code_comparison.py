@@ -20,7 +20,7 @@ surfaces_dir = f"example/truncated/mesh-surfaces"
 outdir = "example/truncated/output"
 
 surface_names = {'epi': 'EPI.vtp',
-                 'epi_apex': 'EPI_APEX2.vtp',    # New surface
+                 'epi_apex': 'EPI_APEX.vtp',    # New surface
                  'base': 'BASE.vtp',
                  'endo_lv': 'LV.vtp',
                  'endo_rv': 'RV.vtp'}
@@ -78,53 +78,53 @@ result_mesh.save(os.path.join(outdir, "check.vtu"))
 
 print(f"generate fibers (new code) elapsed time: {time() - start:.3f} s")
 
-# #%% Load results and compare
-# import meshio as io
-# import numpy as np
+#%% Load results and compare
+import meshio as io
+import numpy as np
 
-# mesh = io.read(os.path.join(outdir, f"fibersLong.vtu"))
-# new_mesh = io.Mesh(points=mesh.points, cells=mesh.cells)
+mesh = io.read(os.path.join(outdir, f"fibersLong.vtu"))
+new_mesh = io.Mesh(points=mesh.points, cells=mesh.cells)
 
-# family = 'Long'
+family = 'Long'
 
-# cell_data={}
-# for family in ['Long', 'Sheet', 'Normal']:
-#     outdir = os.path.join(os.path.dirname(outdir), "output")
-#     fibers_new = io.read(os.path.join(outdir, f"fibers{family}.vtu"))
-#     fibers_new = fibers_new.cell_data['FIB_DIR'][0]
+cell_data={}
+for family in ['Long', 'Sheet', 'Normal']:
+    outdir = os.path.join(os.path.dirname(outdir), "output")
+    fibers_new = io.read(os.path.join(outdir, f"fibers{family}.vtu"))
+    fibers_new = fibers_new.cell_data['FIB_DIR'][0]
 
-#     outdir = os.path.join(os.path.dirname(outdir), "output_old")
-#     fibers_old = io.read(os.path.join(outdir, f"fibers{family}.vtu"))
-#     fibers_old = fibers_old.cell_data['FIB_DIR'][0]
+    outdir = os.path.join(os.path.dirname(outdir), "output_old")
+    fibers_old = io.read(os.path.join(outdir, f"fibers{family}.vtu"))
+    fibers_old = fibers_old.cell_data['FIB_DIR'][0]
 
-#     outdir = os.path.join(os.path.dirname(outdir), "output_old_fix")
-#     fibers_old_fix = io.read(os.path.join(outdir, f"fibers{family}.vtu"))
-#     fibers_old_fix = fibers_old_fix.cell_data['FIB_DIR'][0]
+    outdir = os.path.join(os.path.dirname(outdir), "output_old_fix")
+    fibers_old_fix = io.read(os.path.join(outdir, f"fibers{family}.vtu"))
+    fibers_old_fix = fibers_old_fix.cell_data['FIB_DIR'][0]
 
-#     # per-row dot products, absolute values, then L2 norms of those absolute values
-#     dots_old = np.einsum('ij,ij->i', fibers_new, fibers_old)
-#     dots_old_fix = np.einsum('ij,ij->i', fibers_new, fibers_old_fix)
+    # per-row dot products, absolute values, then L2 norms of those absolute values
+    dots_old = np.einsum('ij,ij->i', fibers_new, fibers_old)
+    dots_old_fix = np.einsum('ij,ij->i', fibers_new, fibers_old_fix)
 
-#     abs_dots_old = np.clip(np.abs(dots_old), 0.0, 1.0)
-#     abs_dots_old_fix = np.clip(np.abs(dots_old_fix), 0.0, 1.0)
+    abs_dots_old = np.clip(np.abs(dots_old), 0.0, 1.0)
+    abs_dots_old_fix = np.clip(np.abs(dots_old_fix), 0.0, 1.0)
 
-#     angles_old = np.rad2deg(np.arccos(abs_dots_old))
-#     angles_old_fix = np.rad2deg(np.arccos(abs_dots_old_fix))
+    angles_old = np.rad2deg(np.arccos(abs_dots_old))
+    angles_old_fix = np.rad2deg(np.arccos(abs_dots_old_fix))
 
-#     norm_old = np.linalg.norm(angles_old)
-#     norm_old_fix = np.linalg.norm(angles_old_fix)
+    norm_old = np.linalg.norm(angles_old)
+    norm_old_fix = np.linalg.norm(angles_old_fix)
 
-#     print(f"{family} norm(|dot(fibers_new, fibers_old)|) = {norm_old}")
-#     print(f"{family} norm(|dot(fibers_new, fibers_old_fix)|) = {norm_old_fix}")
+    print(f"{family} norm(|dot(fibers_new, fibers_old)|) = {norm_old}")
+    print(f"{family} norm(|dot(fibers_new, fibers_old_fix)|) = {norm_old_fix}")
         
 
-#     cell_data.update({f"{family}_DIFF_OLD": [angles_old], 
-#                 f"{family}_ANGLE_DIFF_OLD_FIX": [angles_old_fix],
-#                 f"{family}_FIB_NEW": [fibers_new],
-#                 f"{family}_FIB_OLD": [fibers_old],
-#                 f"{family}_FIB_OLD_FIX": [fibers_old_fix],
-#                 })
+    cell_data.update({f"{family}_DIFF_OLD": [angles_old], 
+                f"{family}_ANGLE_DIFF_OLD_FIX": [angles_old_fix],
+                f"{family}_FIB_NEW": [fibers_new],
+                f"{family}_FIB_OLD": [fibers_old],
+                f"{family}_FIB_OLD_FIX": [fibers_old_fix],
+                })
 
-# new_mesh.cell_data.update(cell_data)
-# io.write('check.vtu', new_mesh)
+new_mesh.cell_data.update(cell_data)
+io.write('check.vtu', new_mesh)
 

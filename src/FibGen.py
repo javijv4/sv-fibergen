@@ -461,8 +461,8 @@ def getFiberDirections(Phi_EPI, Phi_LV, Phi_RV,
 
     Q_LV0 = axis(gPhi_AB, -gPhi_LV)
     Q_LV = orient(Q_LV0, alfaS, betaS)
-    Q_RV0 = axis(gPhi_AB, gPhi_RV)
-    Q_RV = orient(Q_RV0, alfaS, betaS)
+    Q_RV0 = axis(gPhi_AB, gPhi_RV)  # Note that gPhi_RV points the other way
+    Q_RV = orient(Q_RV0, alfaS, -betaS)  # Therefore, we need a minus in betaS
 
     Q_END = bislerp(Q_LV, Q_RV, d)
     Q_END[d > 0.5,:,0] = -Q_END[d > 0.5,:,0]
@@ -509,6 +509,7 @@ def get_alpha_beta_angles(F, Phi_EPI, Phi_LV, Phi_RV,
     L = Q[:, :, 1]                       # (N,3)
 
     # Angle in radians between F and circumferential vector
+    # alpha is positive in the direction of the longitudinal vector
     cosang = np.clip(np.sum(F * C, axis=1), -1.0, 1.0)
     sinang = np.clip(np.sum(F * L, axis=1), -1.0, 1.0)
     alpha_angle = np.sign(sinang) * np.arccos(np.abs(cosang))
@@ -530,12 +531,13 @@ def get_alpha_beta_angles(F, Phi_EPI, Phi_LV, Phi_RV,
 
     Q = bislerp(Q_END, Q_EPI, Phi_EPI)
     Cr = Q[:, :, 0]
-    Lr = Q[:, :, 1]
+    Tr = Q[:, :, 2]
 
-    # Angle in radians between F and circumferential vector
+    # Angle in radians between F and rotated circumferential vector
+    # beta is negative in the direction of the transmural vector
     cosang = np.clip(np.sum(F * Cr, axis=1), -1.0, 1.0)
-    sinang = np.clip(np.sum(F * Lr, axis=1), -1.0, 1.0)
-    beta_angle = np.sign(sinang) * np.arccos(np.abs(cosang))
+    sinang = np.clip(np.sum(F * Tr, axis=1), -1.0, 1.0)
+    beta_angle = - np.sign(sinang) * np.arccos(np.abs(cosang)) # Note the minus sign to match definition
 
     return np.rad2deg(alpha_angle), np.rad2deg(beta_angle), C, Cr
 

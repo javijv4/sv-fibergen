@@ -4,7 +4,7 @@
     <Piece NumberOfPoints="7" NumberOfVerts="0" NumberOfLines="0" NumberOfStrips="0" NumberOfPolys="6">
       <PointData>
         <DataArray type="Int32" Name="GlobalNodeID" format="binary" RangeMin="3863" RangeMax="3874">
-          AQAAAACAAAAcAAAAGwAAAA==eJwT52dgkARiaSCWAWJ5IFYEYiUgBgAR/wEz
+          AQAAAACAAAAcAAAAGwAAAA==eJwT52dgkAZiGSCWBGJ5IFYEYiUgBgASEwEz
         </DataArray>
       </PointData>
       <CellData>
@@ -13,8 +13,8 @@
         </DataArray>
       </CellData>
       <Points>
-        <DataArray type="Float32" Name="Points" NumberOfComponents="3" format="binary" RangeMin="228.06839613064324" RangeMax="228.83443710436728">
-          AQAAAACAAABUAAAAXwAAAA==eJwBVACr/5sWSkIqsh/DiOcbw2GpSUL2Sh/D2FwcwwZKS0KMFB/DY+sbw0bZS0IvoB/D+0obwx+lSkIJqR7DZ2ocw/EYTUIg8h7DU1Abw/5vTEL/dR7DteAbwwbIJYA=
+        <DataArray type="Float64" Name="Points" NumberOfComponents="3" format="binary" RangeMin="228.06839613064324" RangeMax="228.83443710436728">
+          AQAAAACAAACoAAAAcAAAAA==eJxjYGBIuOzk6cDAwODg+i35AJBm+FgDpg84ZILFGyY+AvMTcmoh4hrVYPEHrF8g4vGZYFpBxxQsfiDuJcSc2d1g+sHiELC4guJVCN+nF6JebjFYnMHlHsQcriyI+f97IebvPwfmLxADugcABl0yJg==
           <InformationKey name="L2_NORM_RANGE" location="vtkDataArray" length="2">
             <Value index="0">
               228.06839613
@@ -51,7 +51,7 @@
       </Strips>
       <Polys>
         <DataArray type="Int64" Name="connectivity" format="binary" RangeMin="0" RangeMax="6">
-          AQAAAACAAACQAAAAKAAAAA==eJxjYIAAJijNzIAKGNHkYXwWNHEYzYpmDkycDU0eJs6CJg8AC8gAMw==
+          AQAAAACAAACQAAAAKAAAAA==eJxjYIAARijNxIAKmNHkYXwWNHEYzYpmDkycDU0eJs6CJg8ACuAALw==
         </DataArray>
         <DataArray type="Int64" Name="offsets" format="binary" RangeMin="3" RangeMax="18">
           AQAAAACAAAAwAAAAGAAAAA==eJxjZoAANijNCaV5oDQ/lBaC0gAFcABA
