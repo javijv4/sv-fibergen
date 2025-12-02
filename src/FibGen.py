@@ -141,6 +141,14 @@ def runLaplaceSolver(mesh_dir, surfaces_dir, mesh_file, exec_svfsi, template_fil
                 new_path = os.path.join(surfaces_dir, surface_names['endo_lv'])
             elif face_name == "endo_rv":
                 new_path = os.path.join(surfaces_dir, surface_names['endo_rv'])
+            elif face_name == "mv":
+                new_path = os.path.join(surfaces_dir, surface_names['mv'])
+            elif face_name == "tv":
+                new_path = os.path.join(surfaces_dir, surface_names['tv'])
+            elif face_name == "av":
+                new_path = os.path.join(surfaces_dir, surface_names['av'])
+            elif face_name == "pv":
+                new_path = os.path.join(surfaces_dir, surface_names['pv'])
             else:
                 new_path = None
             
@@ -586,30 +594,30 @@ def generate_fibers_BiV_Bayer_cells(outdir, laplace_results_file, params, return
 
     # Write the fiber directions to a vtu files
     output_mesh = copy.deepcopy(result_mesh)
-    # # Ensure only FIB_DIR is present
-    # for k in list(output_mesh.cell_data.keys()):
-    #     output_mesh.cell_data.remove(k)
-    # for k in list(output_mesh.point_data.keys()):
-    #     output_mesh.point_data.remove(k)
+    # Ensure only FIB_DIR is present
+    for k in list(output_mesh.cell_data.keys()):
+        output_mesh.cell_data.remove(k)
+    for k in list(output_mesh.point_data.keys()):
+        output_mesh.point_data.remove(k)
 
-    # fname1 = os.path.join(outdir, "fibersLong.vtu")
-    # print("   Writing to vtu file   --->   %s" % (fname1))
-    # output_mesh.cell_data.set_array(F, 'FIB_DIR')
-    # output_mesh.save(fname1)
+    fname1 = os.path.join(outdir, "fibersLong.vtu")
+    print("   Writing to vtu file   --->   %s" % (fname1))
+    output_mesh.cell_data.set_array(F, 'FIB_DIR')
+    output_mesh.save(fname1)
 
-    # fname1 = os.path.join(outdir, "fibersSheet.vtu")
-    # print("   Writing to vtu file   --->   %s" % (fname1))
-    # output_mesh.cell_data.set_array(T, 'FIB_DIR')
-    # output_mesh.save(fname1)
+    fname1 = os.path.join(outdir, "fibersSheet.vtu")
+    print("   Writing to vtu file   --->   %s" % (fname1))
+    output_mesh.cell_data.set_array(T, 'FIB_DIR')
+    output_mesh.save(fname1)
 
-    # fname1 = os.path.join(outdir, "fibersNormal.vtu")
-    # print("   Writing to vtu file   --->   %s" % (fname1))
-    # output_mesh.cell_data.set_array(S, 'FIB_DIR')
-    # output_mesh.save(fname1)
+    fname1 = os.path.join(outdir, "fibersNormal.vtu")
+    print("   Writing to vtu file   --->   %s" % (fname1))
+    output_mesh.cell_data.set_array(S, 'FIB_DIR')
+    output_mesh.save(fname1)
 
-    # t2 = time.time()
-    # print('\n   Total time: %.3fs' % (t2-t1))
-    # print("========================================================")
+    t2 = time.time()
+    print('\n   Total time: %.3fs' % (t2-t1))
+    print("========================================================")
 
     if return_angles:
         alpha_angle, beta_angle, eC, eCr = get_alpha_beta_angles(F, Phi_EPI, Phi_LV, Phi_RV,

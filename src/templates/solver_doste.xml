@@ -41,7 +41,7 @@
 	<Add_face name="pv" >
 		<Face_file_path> /Users/jjv/Research/CEPCRTProject/ct_1010/mesh-surfaces/BASE.vtp </Face_file_path>
 	</Add_face>
-	<Add_face name="apex" >
+	<Add_face name="epi_apex" >
 		<Face_file_path> /Users/jjv/Research/CEPCRTProject/ct_1010/mesh-surfaces/EPI_APEX.vtp </Face_file_path>
 	</Add_face>
 	<Add_face name="endo_lv" >
@@ -125,7 +125,7 @@
 		<Tolerance>      1e-6 </Tolerance>
 	</LS>
 
-	<Add_BC name="apex" >
+	<Add_BC name="epi_apex" >
 		<Type> Dir </Type>
 		<Value> 1.0 </Value>
 		<Zero_out_perimeter> 0 </Zero_out_perimeter>
@@ -169,7 +169,7 @@
 		<Tolerance>      1e-6 </Tolerance>
 	</LS>
 
-	<Add_BC name="apex" >
+	<Add_BC name="epi_apex" >
 		<Type> Dir </Type>
 		<Value> 1.0 </Value>
 		<Zero_out_perimeter> 0 </Zero_out_perimeter>
@@ -212,7 +212,7 @@
 		<Tolerance>      1e-6 </Tolerance>
 	</LS>
 
-	<Add_BC name="apex" >
+	<Add_BC name="epi_apex" >
 		<Type> Dir </Type>
 		<Value> 1.0 </Value>
 		<Zero_out_perimeter> 0 </Zero_out_perimeter>
@@ -255,7 +255,7 @@
 		<Tolerance>      1e-6 </Tolerance>
 	</LS>
 
-	<Add_BC name="apex" >
+	<Add_BC name="epi_apex" >
 		<Type> Dir </Type>
 		<Value> 1.0 </Value>
 		<Zero_out_perimeter> 0 </Zero_out_perimeter>
@@ -411,7 +411,7 @@
 
 
 <!-- Ninth problem: Epicardial transmural (Trans_EPI) -->
-<!-- lv_epi: 1.0, rv_epi: 1.0; lv_endo: 0.0, rv_endo: 0.0, rv_septum: 0.0 -->
+<!-- epi: 1.0; lv_endo: 0.0, rv_endo -->
 <Add_equation type="heatS" >
 	<Coupled> 0 </Coupled>
 	<Min_iterations> 1 </Min_iterations>
@@ -438,12 +438,7 @@
 		<Tolerance>      1e-6 </Tolerance>
 	</LS>
 
-	<Add_BC name="lv_epi" >
-		<Type> Dir </Type>
-		<Value> 1.0 </Value>
-		<Zero_out_perimeter> 0 </Zero_out_perimeter>
-	</Add_BC>
-	<Add_BC name="rv_epi" >
+	<Add_BC name="epi" >
 		<Type> Dir </Type>
 		<Value> 1.0 </Value>
 		<Zero_out_perimeter> 0 </Zero_out_perimeter>
@@ -458,15 +453,10 @@
 		<Value> 0.0 </Value>
 		<Zero_out_perimeter> 0 </Zero_out_perimeter>
 	</Add_BC>
-	<Add_BC name="rv_septum" >
-		<Type> Dir </Type>
-		<Value> 0.0 </Value>
-		<Zero_out_perimeter> 0 </Zero_out_perimeter>
-	</Add_BC>
 </Add_equation>
 
 <!-- Tenth problem: LV transmural (Trans_LV) -->
-<!-- lv_endo: 1.0; others 0.0 (lv_epi, rv_epi, rv_endo, rv_septum) -->
+<!-- lv_endo: 1.0; others 0.0 (epi, rv_endo) -->
 <Add_equation type="heatS" >
 	<Coupled> 0 </Coupled>
 	<Min_iterations> 1 </Min_iterations>
@@ -493,22 +483,12 @@
 		<Tolerance>      1e-6 </Tolerance>
 	</LS>
 
-	<Add_BC name="lv_epi" >
-		<Type> Dir </Type>
-		<Value> 0.0 </Value>
-		<Zero_out_perimeter> 0 </Zero_out_perimeter>
-	</Add_BC>
-	<Add_BC name="rv_epi" >
+	<Add_BC name="epi" >
 		<Type> Dir </Type>
 		<Value> 0.0 </Value>
 		<Zero_out_perimeter> 0 </Zero_out_perimeter>
 	</Add_BC>
 	<Add_BC name="endo_rv" >
-		<Type> Dir </Type>
-		<Value> 0.0 </Value>
-		<Zero_out_perimeter> 0 </Zero_out_perimeter>
-	</Add_BC>
-	<Add_BC name="rv_septum" >
 		<Type> Dir </Type>
 		<Value> 0.0 </Value>
 		<Zero_out_perimeter> 0 </Zero_out_perimeter>
@@ -521,7 +501,7 @@
 </Add_equation>
 
 <!-- Eleventh problem: RV transmural (Trans_RV) -->
-<!-- rv_endo: 1.0 and rv_septum: 1.0; others 0.0 -->
+<!-- rv_endo: 1.0; others 0.0 -->
 <Add_equation type="heatS" >
 	<Coupled> 0 </Coupled>
 	<Min_iterations> 1 </Min_iterations>
@@ -548,12 +528,7 @@
 		<Tolerance>      1e-6 </Tolerance>
 	</LS>
 
-	<Add_BC name="lv_epi" >
-		<Type> Dir </Type>
-		<Value> 0.0 </Value>
-		<Zero_out_perimeter> 0 </Zero_out_perimeter>
-	</Add_BC>
-	<Add_BC name="rv_epi" >
+	<Add_BC name="epi" >
 		<Type> Dir </Type>
 		<Value> 0.0 </Value>
 		<Zero_out_perimeter> 0 </Zero_out_perimeter>
@@ -564,11 +539,6 @@
 		<Zero_out_perimeter> 0 </Zero_out_perimeter>
 	</Add_BC>
 	<Add_BC name="endo_rv" >
-		<Type> Dir </Type>
-		<Value> 1.0 </Value>
-		<Zero_out_perimeter> 0 </Zero_out_perimeter>
-	</Add_BC>
-	<Add_BC name="rv_septum" >
 		<Type> Dir </Type>
 		<Value> 1.0 </Value>
 		<Zero_out_perimeter> 0 </Zero_out_perimeter>
