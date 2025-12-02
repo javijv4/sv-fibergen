@@ -4,3 +4,6 @@ fibersLong.vtu
 fibersNormal.vtu
 fibersSheet.vtu
 check*.vtu
+result_*.vtu
+.DS_Store
+__pycache__/

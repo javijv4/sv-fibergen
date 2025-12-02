@@ -10,7 +10,7 @@ import os
 import src.FibGen as fg
 from time import time
 
-run_flag = True
+run_flag = False
 method = 'doste'
 svfsi_exec = "svmultiphysics "
 
@@ -71,7 +71,7 @@ if run_flag:
     laplace_results_file = fg.runLaplaceSolver(mesh_path, surfaces_dir, mesh_path, svfsi_exec, template_file, outdir, surface_names)
 laplace_results_file = outdir + '/result_001.vtu'
 
-# # Generate the fiber directions
-# result_mesh = fg.generate_fibers_BiV_Bayer_cells(outdir, laplace_results_file, params)
+# Generate the fiber directions
+result_mesh = fg.generate_fibers_BiV_Doste_cells(outdir, laplace_results_file, params)
 
 # print(f"generate fibers (new code) elapsed time: {time() - start:.3f} s")
