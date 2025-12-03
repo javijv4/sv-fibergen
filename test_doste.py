@@ -72,6 +72,9 @@ if run_flag:
 laplace_results_file = outdir + '/result_001.vtu'
 
 # Generate the fiber directions
-result_mesh = fg.generate_fibers_BiV_Doste_cells(outdir, laplace_results_file, params)
+result_mesh = fg.generate_fibers_BiV_Doste_cells(outdir, laplace_results_file, params, return_intermediate=True)
+
+result_mesh_path = os.path.join(outdir, "check.vtu")
+result_mesh.save(result_mesh_path)
 
 # print(f"generate fibers (new code) elapsed time: {time() - start:.3f} s")

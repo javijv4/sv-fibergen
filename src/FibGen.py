@@ -183,7 +183,7 @@ def runLaplaceSolver(mesh_dir, surfaces_dir, mesh_file, exec_svfsi, template_fil
     return outdir + '/results_001.vtu'
 
 
-def loadLaplaceSoln(fileName):
+def loadLaplaceSolnBayer(fileName):
     '''
     Load a solution to a Laplace-Dirichlet problem from a .vtu file and extract
     the solution and its gradients at the cells.
@@ -446,7 +446,7 @@ def orient(Q, alpha, beta):
 
     return Qt
 
-def getFiberDirections(Phi_EPI, Phi_LV, Phi_RV,
+def getFiberDirectionsBayer(Phi_EPI, Phi_LV, Phi_RV,
                                  gPhi_EPI, gPhi_LV, gPhi_RV, gPhi_AB, 
                                  params, intermediate=False):
     '''
@@ -567,11 +567,11 @@ def generate_fibers_BiV_Bayer_cells(outdir, laplace_results_file, params, return
 
     # Load Laplace solution    
     result_mesh, Phi_EPI, Phi_LV, Phi_RV, Phi_AB, \
-    gPhi_EPI, gPhi_LV, gPhi_RV, gPhi_AB = loadLaplaceSoln(laplace_results_file)
+    gPhi_EPI, gPhi_LV, gPhi_RV, gPhi_AB = loadLaplaceSolnBayer(laplace_results_file)
 
 
     # Generate fiber directions
-    out = getFiberDirections(Phi_EPI, Phi_LV, Phi_RV,
+    out = getFiberDirectionsBayer(Phi_EPI, Phi_LV, Phi_RV,
                                  gPhi_EPI, gPhi_LV, gPhi_RV, gPhi_AB, 
                                  params, intermediate=return_intermediate)
     
@@ -631,3 +631,369 @@ def generate_fibers_BiV_Bayer_cells(outdir, laplace_results_file, params, return
 
     return output_mesh
 
+
+
+def loadLaplaceSolnDoste(fileName):
+    '''
+    Load a solution to a Laplace-Dirichlet problem from a .vtu file and extract
+    the solution and its gradients at the cells.
+
+    ARGS:
+    fileName : str
+        Path to the .vtu file with the Laplace solution. The solution should be
+        defined at the nodes. 
+
+    Returns:
+    lap : dict
+        Dictionary of Laplace solution at cells
+    grad : dict
+        Dictionary of gradients at cells
+    '''
+
+    varnames = ['Trans_BiV', 'Long_AV', 'Long_MV', 'Long_PV', 'Long_TV', 'Weight_LV', 
+                'Weight_RV', 'Weight_RV_OP', 'Trans_EPI', 'Trans_LV', 'Trans_RV']
+
+    print("   Loading Laplace solution <---   %s" % (fileName))
+
+    # Read mesh with pyvista
+    result_mesh = pv.read(fileName)
+
+    # Convert point-data to cell-data (keep point data passed to cells)
+    mesh_cells = result_mesh.point_data_to_cell_data()
+
+    print("   Extracting solution and estimating gradients at cells")
+
+    # Map VTU array names to internal keys expected by downstream code
+    name_map = {
+        'Trans_BiV': 'ven_trans',
+        'Long_AV': 'lv_av_long',
+        'Long_MV': 'lv_mv_long',
+        'Long_PV': 'rv_pv_long',
+        'Long_TV': 'rv_tv_long',
+        'Weight_LV': 'lv_weight',
+        'Weight_RV': 'rv_weight',
+        'Weight_RV_OP': 'rv_op_weight',
+        'Trans_EPI': 'epi_trans',
+        'Trans_LV': 'lv_trans',
+        'Trans_RV': 'rv_trans',
+    }
+
+    lap = {}
+    grad = {}
+
+    for vname in varnames:
+        if vname not in mesh_cells.cell_data:
+            print(f"   Warning: '{vname}' not found in cell_data; skipping")
+            continue
+        key = name_map[vname]
+
+        # Cell-centered Laplace values
+        lap[key] = np.asarray(mesh_cells.cell_data[vname])
+
+        # Cell-centered gradients via PyVista
+        gmesh = mesh_cells.compute_derivative(scalars=vname, gradient=True, preference='cell')
+        grad[key] = np.asarray(gmesh.cell_data['gradient'])
+
+    return result_mesh, lap, grad
+
+
+def compute_basis_vectors(lap, grad):
+    # LV
+    # longitudinal
+    lv_glong = grad['lv_mv_long']*lap['lv_weight'][:,None] + grad['lv_av_long']*(1 - lap['lv_weight'][:,None])
+    eL_lv = lv_glong/np.linalg.norm(lv_glong, axis=1)[:,None]
+
+    # transmural
+    lv_gtrans = grad['lv_trans'] - (eL_lv*grad['lv_trans'])*eL_lv
+    eT_lv = lv_gtrans/np.linalg.norm(lv_gtrans, axis=1)[:,None]
+
+    # circumferential
+    eC_lv = np.cross(eL_lv, eT_lv, axisa=1, axisb=1)
+    eC_lv = eC_lv/np.linalg.norm(eC_lv, axis=1)[:,None]
+
+    # Ensuring orthogonality
+    eT_lv = np.cross(eC_lv, eL_lv, axisa=1, axisb=1)
+    eT_lv = eT_lv/np.linalg.norm(eT_lv, axis=1)[:,None]
+
+    # RV
+    # longitudinal
+    rv_glong = grad['rv_tv_long']*lap['rv_weight'][:,None]  + grad['rv_pv_long']*(1 - lap['rv_weight'][:,None] )
+    eL_rv = rv_glong/np.linalg.norm(rv_glong, axis=1)[:,None]
+
+    # transmural
+    rv_gtrans = grad['rv_trans'] - (eL_rv*grad['rv_trans'])*eL_rv
+    eT_rv = rv_gtrans/np.linalg.norm(rv_gtrans, axis=1)[:,None]
+
+    # circumferential
+    eC_rv = np.cross(eL_rv, eT_rv, axisa=1, axisb=1)
+    eC_rv = eC_rv/np.linalg.norm(eC_rv, axis=1)[:,None]
+
+    # Ensuring orthogonality
+    eT_rv = np.cross(eC_rv, eL_rv, axisa=1, axisb=1)
+    eT_rv = eT_rv/np.linalg.norm(eT_rv, axis=1)[:,None]
+
+    # Write out global circumferential vector
+    eC = eC_rv*(1-lap['ven_trans'][:,None]) + eC_lv*lap['ven_trans'][:,None]
+    eC = eC/np.linalg.norm(eC, axis=1)[:,None]
+
+    basis = {'eC_lv': eC_lv,
+                    'eT_lv': eT_lv,
+                    'eL_lv': eL_lv,
+                    'eC_rv': eC_rv,
+                    'eT_rv': eT_rv,
+                    'eL_rv': eL_rv,
+                    'eC': eC}
+
+    return basis
+
+
+def redistribute_weight(weight, up, low, strategy='centre'):
+    new_weight = weight.copy()
+
+    if strategy == 'flip':
+        # Shift all weights
+        new_mean = 1 - np.mean(weight)
+        shift = new_mean - np.mean(weight)
+        new_weight = new_weight + shift
+
+        # Cut off values outside of range 0 - 1
+        new_weight[new_weight > 1] = 1
+        new_weight[new_weight < 0] = 0
+
+        # Redistribute new tail
+        new_weight = (new_weight - np.min(new_weight)) / (np.max(new_weight) - np.min(new_weight))
+        tmp = new_weight.copy()
+
+        if shift > 0:
+            tmp[tmp >= new_mean] = np.nan
+            tmp = (tmp - np.nanmin(tmp)) / (new_mean - np.nanmin(tmp))
+        elif shift < 0:
+            tmp[tmp <= new_mean] = np.nan
+            tmp = (tmp - new_mean) / (np.nanmax(tmp) - new_mean)
+
+        tmp[np.isnan(tmp)] = new_weight[np.isnan(tmp)]
+        new_weight = tmp
+
+    else:  # cut off tails so that weights are centered
+        # Find upper and lower limits
+        upper_lim = np.quantile(weight, up)
+        while upper_lim == 0:
+            print('Upper limit is 0, increasing upper limit')
+            up += 0.1
+            upper_lim = np.quantile(weight, up)
+        
+        lower_lim = np.quantile(weight, low)
+
+        # Set upper and lower values to limits
+        new_weight[new_weight > upper_lim] = upper_lim
+        new_weight[new_weight < lower_lim] = lower_lim
+
+        # Redistribute/normalize values
+        new_weight = (new_weight - np.min(new_weight)) / (np.max(new_weight) - np.min(new_weight))
+
+    return new_weight
+
+
+def compute_alpha_beta_angles(lap, params):
+
+    # LV
+    alpha_lv_endo_long = params['AENDOLV'] * lap['lv_weight'] + params['AOTENDOLV'] * (1 - lap['lv_weight'])  # Endo
+    new_long_weight = redistribute_weight(lap['lv_mv_long'], 0.7, 0.01)
+    alpha_lv_epi_long = params['AEPILV'] * new_long_weight + params['AOTEPILV'] * (1 - new_long_weight)
+
+    alpha_wall_lv = alpha_lv_endo_long * (1 - lap['epi_trans']) + alpha_lv_epi_long * lap['epi_trans']
+    beta_wall_lv = (params['BENDOLV'] * (1 - lap['epi_trans']) + params['BEPILV'] * lap['epi_trans']) * lap['lv_weight']
+
+    # RV
+    new_long_weight_rv = redistribute_weight(lap['rv_op_weight'], 0.2, 0.001)
+    alpha_rv_endo_long = params['AENDORV'] * new_long_weight_rv + params['ATRIENDO'] * (1 - new_long_weight_rv)
+    alpha_rv_epi_long = params['AEPIRV'] * lap['rv_weight'] + params['AOTEPIRV'] * (1 - lap['lv_weight'])
+
+    alpha_wall_rv = alpha_rv_endo_long * (1 - lap['epi_trans']) + alpha_rv_epi_long * lap['epi_trans']
+    beta_wall_rv = (params['BENDORV'] * (1 - lap['epi_trans']) + params['BEPIRV'] * lap['epi_trans']) * lap['rv_weight']
+
+    # Septum
+    sep = np.abs(lap['ven_trans'] - 0.5)
+    sep = (sep - np.min(sep)) / (np.max(sep) - np.min(sep))
+    alpha_septum = (alpha_lv_endo_long * sep * lap['lv_trans']) + (alpha_rv_endo_long * sep * lap['rv_trans'])
+    beta_septum = (params['BENDOLV'] * lap['lv_trans'] * lap['lv_weight']) + (params['BENDORV'] * lap['rv_trans'] * lap['lv_weight'])
+
+    angles = {'alpha_lv_endo_long': alpha_lv_endo_long,
+            'alpha_lv_epi_long': alpha_lv_epi_long,
+            'alpha_wall_lv': alpha_wall_lv,
+            'beta_wall_lv': beta_wall_lv,
+            'alpha_rv_endo_long': alpha_rv_endo_long,
+            'alpha_rv_epi_long': alpha_rv_epi_long,
+            'alpha_wall_rv': alpha_wall_rv,
+            'beta_wall_rv': beta_wall_rv,
+            'alpha_septum': alpha_septum,
+            'beta_septum': beta_septum
+            }
+
+    return angles
+
+
+def rotate_basis(eC, eL, eT, alpha, beta):
+    eC = eC/np.linalg.norm(eC, axis=1)[:,None]
+    eT = eT/np.linalg.norm(eT, axis=1)[:,None]
+    eL = eL/np.linalg.norm(eL, axis=1)[:,None]
+
+    # Matrix of directional vectors
+    Q = np.stack([eC, eL, eT], axis=-1)
+    Q = np.transpose(Q, (2, 1, 0))
+
+    # Create rotation matrix - from Doste code
+    axis = eT
+    R = np.array([[np.cos(alpha) + (axis[:, 0]**2)*(1 - np.cos(alpha)), axis[:,0] * axis[:,1]*(1 - np.cos(alpha)) - axis[:,2]*np.sin(alpha), axis[:,0]*axis[:,2]*(1 - np.cos(alpha)) + axis[:,1]*np.sin(alpha)],
+                            [axis[:,1]*axis[:,0]*(1 - np.cos(alpha)) + axis[:,2]*np.sin(alpha), np.cos(alpha) + (axis[:,1]**2)*(1 - np.cos(alpha)), axis[:,1]*axis[:, 2]*(1 - np.cos(alpha)) - axis[:, 0]*np.sin(alpha)],
+                            [axis[:,2]*axis[:,0]*(1 - np.cos(alpha)) - axis[:,1]*np.sin(alpha), axis[:,2]*axis[:,1]*(1 - np.cos(alpha)) + axis[:, 0]*np.sin(alpha), np.cos(alpha)+(axis[:, 2]**2)*(1 - np.cos(alpha))]])
+
+    # Rotate the circumferential direction around the transmural direction
+    QX = np.zeros_like(R)
+    for i in range(len(eC)):
+        QX[:, :, i] = np.matmul(Q[:, :, i], R[:, :, i])
+
+    # Second rotation (beta) about QX
+    axis2 = QX[1, :, :].T
+    R2 = np.array([
+        [np.cos(beta) + (axis2[:,0]**2)*(1 - np.cos(beta)), axis2[:,0]*axis2[:, 1]*(1 - np.cos(beta)) - axis2[:,2] * np.sin(beta), axis2[:,0] * axis2[:,2] * (1 - np.cos(beta)) + axis2[:,1] * np.sin(beta)],
+        [axis2[:,1] * axis2[:,0]*(1 - np.cos(beta)) + axis2[:,2]*np.sin(beta), np.cos(beta) + (axis2[:,1]**2)*(1 - np.cos(beta)), axis2[:,1] * axis2[:,2] * (1 - np.cos(beta)) - axis2[:,0] * np.sin(beta)],
+        [axis2[:,2] * axis2[:,0]*(1 - np.cos(beta)) - axis2[:,1]*np.sin(beta), axis2[:, 2] * axis2[:,1] * (1 - np.cos(beta)) + axis2[:,0] * np.sin(beta), np.cos(beta) + (axis2[:,2]**2) * (1 - np.cos(beta))]
+    ])
+
+    QX2 = np.zeros((R.shape[2], 3, 3), dtype=float)
+    for i in range(len(eC)):
+        QX2[i] = np.matmul(QX[:, :, i], R2[:, :, i]).T
+
+    return QX2
+
+
+def compute_local_basis(basis, angles):
+    Qlv_septum = rotate_basis(basis['eC_lv'], basis['eL_lv'], basis['eT_lv'], angles['alpha_septum'], angles['beta_septum'])
+    Qrv_septum = rotate_basis(basis['eC_rv'], basis['eL_rv'], basis['eT_rv'], angles['alpha_septum'], angles['beta_septum'])
+    Qlv_epi = rotate_basis(basis['eC_lv'], basis['eL_lv'], basis['eT_lv'], angles['alpha_wall_lv'], angles['beta_wall_lv'])
+    Qrv_epi = rotate_basis(basis['eC_rv'], basis['eL_rv'], basis['eT_rv'], angles['alpha_wall_rv'], angles['beta_wall_rv'])
+
+    local_basis = {'Qlv_septum': Qlv_septum,
+                    'Qrv_septum': Qrv_septum,
+                    'Qlv_epi': Qlv_epi,
+                    'Qrv_epi': Qrv_epi,
+                    }
+
+    return local_basis
+
+
+def interpolate_local_basis(lap, local_basis):
+
+    epi_trans = lap['epi_trans']
+
+    Qrv_septum = local_basis['Qrv_septum']
+    Qrv_epi = local_basis['Qrv_epi']
+    Qlv_epi = local_basis['Qlv_epi']
+
+    Qepi = bislerp(Qrv_epi, Qlv_epi, lap['ven_trans'])
+    Q = bislerp(Qrv_septum, Qepi, epi_trans)
+
+    return Q
+
+
+def getFiberDirectionsDoste(lap, grad, params, intermediate=False):
+    # Convert parameters from degrees to radians
+    for key in params:
+        params[key] = np.deg2rad(params[key])
+
+    print('Computing basis vectors')
+    basis = compute_basis_vectors(lap, grad)
+
+    print('Computing angles')
+    angles = compute_alpha_beta_angles(lap, params)
+
+    print('Computing local basis')
+    local_basis = compute_local_basis(basis, angles)
+
+    print('Interpolating basis')
+    Q = interpolate_local_basis(lap, local_basis)
+
+    print('Done!')
+    f = Q[:, :, 1]
+    s = Q[:, :, 2]
+    n = Q[:, :, 0]
+
+    if intermediate:
+        return f, s, n, basis, angles, local_basis
+
+    return f, s, n
+
+
+def generate_fibers_BiV_Doste_cells(outdir, laplace_results_file, params, return_angles=False, return_intermediate=False):
+    '''
+    Generate fiber directions on a truncated BiV ventricular geometry using the
+    Laplace-Dirichlet rule-based method of Bayer et al. 2012
+
+    ARGS:
+    laplace_results_file : str
+        Path to the .vtu mesh with Laplace fields defined at nodes
+    params : dict
+        Dictionary of parameters for fiber generation
+    '''
+    
+    t1 = time.time()
+    print("========================================================")
+
+    # Load Laplace solution    
+    result_mesh,lap, grad = loadLaplaceSolnDoste(laplace_results_file)
+
+
+    # Generate fiber directions
+    out = getFiberDirectionsDoste(lap, grad, params, intermediate=return_intermediate)
+
+    if return_intermediate:
+        F, S, T, basis, angles, local_basis = out
+        result_mesh.cell_data['F'] = F
+        result_mesh.cell_data['S'] = S
+        result_mesh.cell_data['T'] = T
+        for k, v in basis.items():
+            result_mesh.cell_data[k] = v
+        for k, v in angles.items():
+            result_mesh.cell_data[k] = v
+        for k, v in local_basis.items():
+            # Flatten local basis matrices to store
+            flattened = v[:, :, 0]
+            result_mesh.cell_data[k] = flattened
+    else:
+        F, S, T = out
+        result_mesh.cell_data['F'] = F
+        result_mesh.cell_data['S'] = S
+        result_mesh.cell_data['T'] = T
+
+    print("   Writing domains and fibers to VTK data structure")
+
+    # Write the fiber directions to a vtu files
+    output_mesh = copy.deepcopy(result_mesh)
+    # # Ensure only FIB_DIR is present
+    # for k in list(output_mesh.cell_data.keys()):
+    #     output_mesh.cell_data.remove(k)
+    # for k in list(output_mesh.point_data.keys()):
+    #     output_mesh.point_data.remove(k)
+
+    fname1 = os.path.join(outdir, "fibersLong.vtu")
+    print("   Writing to vtu file   --->   %s" % (fname1))
+    output_mesh.cell_data.set_array(F, 'FIB_DIR')
+    output_mesh.save(fname1)
+
+    fname1 = os.path.join(outdir, "fibersSheet.vtu")
+    print("   Writing to vtu file   --->   %s" % (fname1))
+    output_mesh.cell_data.set_array(T, 'FIB_DIR')
+    output_mesh.save(fname1)
+
+    fname1 = os.path.join(outdir, "fibersNormal.vtu")
+    print("   Writing to vtu file   --->   %s" % (fname1))
+    output_mesh.cell_data.set_array(S, 'FIB_DIR')
+    output_mesh.save(fname1)
+
+    t2 = time.time()
+    print('\n   Total time: %.3fs' % (t2-t1))
+    print("========================================================")
+
+
+    return output_mesh
