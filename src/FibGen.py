@@ -7,12 +7,9 @@ Created on 2025/11/21 20:43:23
 '''
 
 import os
-import sys
 import re
 import numpy as np
 import pyvista as pv
-import vtk
-from vtkmodules.util import numpy_support as vtknp
 import time
 import copy
 
@@ -590,6 +587,14 @@ def generate_fibers_BiV_Bayer_cells(outdir, laplace_results_file, params, return
     gPhi_EPI, gPhi_LV, gPhi_RV, gPhi_AB = loadLaplaceSolnBayer(laplace_results_file)
 
 
+    # Write the fiber directions to a vtu files
+    output_mesh = copy.deepcopy(result_mesh)
+    # Ensure only FIB_DIR is present
+    for k in list(output_mesh.cell_data.keys()):
+        output_mesh.cell_data.remove(k)
+    for k in list(output_mesh.point_data.keys()):
+        output_mesh.point_data.remove(k)
+        
     # Generate fiber directions
     out = getFiberDirectionsBayer(Phi_EPI, Phi_LV, Phi_RV,
                                  gPhi_EPI, gPhi_LV, gPhi_RV, gPhi_AB, 
@@ -612,13 +617,6 @@ def generate_fibers_BiV_Bayer_cells(outdir, laplace_results_file, params, return
 
     print("   Writing domains and fibers to VTK data structure")
 
-    # Write the fiber directions to a vtu files
-    output_mesh = copy.deepcopy(result_mesh)
-    # Ensure only FIB_DIR is present
-    for k in list(output_mesh.cell_data.keys()):
-        output_mesh.cell_data.remove(k)
-    for k in list(output_mesh.point_data.keys()):
-        output_mesh.point_data.remove(k)
 
     fname1 = os.path.join(outdir, "fibersLong.vtu")
     print("   Writing to vtu file   --->   %s" % (fname1))
@@ -643,13 +641,13 @@ def generate_fibers_BiV_Bayer_cells(outdir, laplace_results_file, params, return
         alpha_angle, beta_angle, eC, eCr = get_alpha_beta_angles_Bayer(F, Phi_EPI, Phi_LV, Phi_RV,
                                  gPhi_EPI, gPhi_LV, gPhi_RV, gPhi_AB, 
                                  params)
-        output_mesh.cell_data['Alpha_Angle'] = alpha_angle
-        output_mesh.cell_data['Beta_Angle'] = beta_angle
-        output_mesh.cell_data['eC'] = eC
-        output_mesh.cell_data['eCr'] = eCr
+        result_mesh.cell_data['Alpha_Angle'] = alpha_angle
+        result_mesh.cell_data['Beta_Angle'] = beta_angle
+        result_mesh.cell_data['eC'] = eC
+        result_mesh.cell_data['eCr'] = eCr
     
 
-    return output_mesh
+    return result_mesh
 
 
 
@@ -966,6 +964,13 @@ def generate_fibers_BiV_Doste_cells(outdir, laplace_results_file, params, return
     # Load Laplace solution    
     result_mesh,lap, grad = loadLaplaceSolnDoste(laplace_results_file)
 
+    # Write the fiber directions to a vtu files
+    output_mesh = copy.deepcopy(result_mesh)
+    # Ensure only FIB_DIR is present
+    for k in list(output_mesh.cell_data.keys()):
+        output_mesh.cell_data.remove(k)
+    for k in list(output_mesh.point_data.keys()):
+        output_mesh.point_data.remove(k)
 
     # Generate fiber directions
     out = getFiberDirectionsDoste(lap, grad, params, intermediate=return_intermediate)
@@ -992,13 +997,6 @@ def generate_fibers_BiV_Doste_cells(outdir, laplace_results_file, params, return
 
     print("   Writing domains and fibers to VTK data structure")
 
-    # Write the fiber directions to a vtu files
-    output_mesh = copy.deepcopy(result_mesh)
-    # Ensure only FIB_DIR is present
-    for k in list(output_mesh.cell_data.keys()):
-        output_mesh.cell_data.remove(k)
-    for k in list(output_mesh.point_data.keys()):
-        output_mesh.point_data.remove(k)
 
     fname1 = os.path.join(outdir, "fibersLong.vtu")
     print("   Writing to vtu file   --->   %s" % (fname1))
@@ -1021,13 +1019,13 @@ def generate_fibers_BiV_Doste_cells(outdir, laplace_results_file, params, return
 
     if return_angles:
         alpha_angle, beta_angle, eC, eCr = get_alpha_beta_angles_Doste(F, lap, grad, params)
-        output_mesh.cell_data['Alpha_Angle'] = alpha_angle
-        output_mesh.cell_data['Beta_Angle'] = beta_angle
-        output_mesh.cell_data['eC'] = eC
-        output_mesh.cell_data['eCr'] = eCr
+        result_mesh.cell_data['Alpha_Angle'] = alpha_angle
+        result_mesh.cell_data['Beta_Angle'] = beta_angle
+        result_mesh.cell_data['eC'] = eC
+        result_mesh.cell_data['eCr'] = eCr
 
 
-    return output_mesh
+    return result_mesh
 
 
 

@@ -76,10 +76,10 @@ if run_flag:
 laplace_results_file = outdir + '/result_001.vtu'
 
 # Generate the fiber directions
-result_mesh = fg.generate_fibers_BiV_Doste_cells(outdir, laplace_results_file, params, return_angles=True, return_intermediate=True)
+result_mesh = fg.generate_fibers_BiV_Doste_cells(outdir, laplace_results_file, params, return_angles=True, return_intermediate=False)
 
 print(f"generate fibers (Doste method) elapsed time: {time() - start:.3f} s")
 
 # Optional, save the result mesh with intermediate field and angles for checking
-# result_mesh_path = os.path.join(outdir, "results_doste.vtu")
-# result_mesh.save(result_mesh_path)
+result_mesh_path = os.path.join(outdir, "results_doste.vtu")
+result_mesh.save(result_mesh_path)

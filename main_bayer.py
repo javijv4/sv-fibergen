@@ -60,5 +60,5 @@ result_mesh = fg.generate_fibers_BiV_Bayer_cells(outdir, laplace_results_file, p
 print(f"generate fibers (Bayer method) elapsed time: {time() - start:.3f} s")
 
 # Optional, save the result mesh with intermediate field and angles for checking
-# result_mesh_path = os.path.join(outdir, "results_bayer.vtu")
-# result_mesh.save(result_mesh_path)
+result_mesh_path = os.path.join(outdir, "results_bayer.vtu")
+result_mesh.save(result_mesh_path)
