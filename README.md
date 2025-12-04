@@ -6,9 +6,8 @@ Python + SVmultiphysics codes for fiber generation. Two methods are implemented:
 ### Examples
 The `main_bayer.py` and `main_doste.py` are scripts to run both methods in the geometry described in the `example/truncated` and `example/ot` folders respectively.
 
-![Results for truncated BiV (Bayer)](example/truncated/bayer.png)
-
-![Results for BiV w/ outflow tracts (Bayer)](example/ot/doste.png)
+<img src="example/truncated/bayer.png" alt="Results for truncated BiV (Bayer)" width="640" />
+<img src="example/ot/doste.png" alt="Results for BiV w/ outflow tracts (Doste)" width="640" />
 
 Note that the Doste methods needs a geometry with outflow tracts to be run (each valve needs to be defined as a separated surface). Bayer can be run in any biventricular geometry.
 
