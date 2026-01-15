@@ -14,6 +14,7 @@ Supports both:
 import os
 from xml.etree import ElementTree as ET
 from xml.dom import minidom
+from .SurfaceNames import SurfaceName
 
 
 class LaplaceSolver:
@@ -24,18 +25,19 @@ class LaplaceSolver:
     
     Attributes:
         mesh_path: Path to the volumetric mesh file (.vtu).
-        surface_paths: Dictionary mapping surface names to full file paths.
+        surface_paths: Dictionary mapping SurfaceName enum values to full file paths.
         exec_svmultiphysics: Command to execute svMultiPhysics solver.
     
     Example:
+        >>> from src.SurfaceNames import SurfaceName
         >>> solver = LaplaceSolver(
         ...     mesh_path="/path/to/mesh.vtu",
         ...     surface_paths={
-        ...         'epi': '/path/to/epi.vtp',
-        ...         'endo_lv': '/path/to/lv.vtp',
-        ...         'endo_rv': '/path/to/rv.vtp',
-        ...         'base': '/path/to/base.vtp',
-        ...         'epi_apex': '/path/to/apex.vtp',
+        ...         SurfaceName.EPI: '/path/to/epi.vtp',
+        ...         SurfaceName.ENDO_LV: '/path/to/lv.vtp',
+        ...         SurfaceName.ENDO_RV: '/path/to/rv.vtp',
+        ...         SurfaceName.BASE: '/path/to/base.vtp',
+        ...         SurfaceName.EPI_APEX: '/path/to/apex.vtp',
         ...     },
         ...     exec_svmultiphysics="svmultiphysics "
         ... )
@@ -52,13 +54,24 @@ class LaplaceSolver:
         
         Args:
             mesh_path: Path to the volumetric mesh file (.vtu).
-            surface_paths: Dictionary mapping surface names to full file paths.
-                For Bayer method, required keys: 'epi', 'endo_lv', 'endo_rv', 'base', 'epi_apex'
-                For Doste method, required keys: 'epi', 'endo_lv', 'endo_rv', 'epi_apex',
-                    'mv', 'av', 'tv', 'pv'
+            surface_paths: Dictionary mapping SurfaceName enum values to full file paths.
+                For Bayer method, required: SurfaceName.EPI, ENDO_LV, ENDO_RV, BASE, EPI_APEX
+                For Doste method, required: SurfaceName.EPI, ENDO_LV, ENDO_RV, EPI_APEX, MV, AV, TV, PV
             exec_svmultiphysics: Command to execute svMultiPhysics (e.g., "svmultiphysics ").
+            
+        Raises:
+            TypeError: If surface_paths contains non-enum keys.
         """
         self.mesh_path = mesh_path
+        
+        # Validate that all keys are SurfaceName enum values
+        for key in surface_paths.keys():
+            if not isinstance(key, SurfaceName):
+                raise TypeError(
+                    f"surface_paths must use SurfaceName enum keys, not {type(key).__name__}. "
+                    f"Got key: {key}"
+                )
+        
         self.surface_paths = surface_paths
         self.exec_svmultiphysics = exec_svmultiphysics
     
@@ -127,21 +140,20 @@ class LaplaceSolver:
             
         Returns:
             str: Path to the surface file.
+            
+        Raises:
+            KeyError: If the surface is not found in surface_paths.
         """
-        # Map XML face names to surface_paths keys
-        name_map = {
-            'epi': 'epi',
-            'epi_top': 'base',
-            'epi_apex': 'epi_apex',
-            'endo_lv': 'endo_lv',
-            'endo_rv': 'endo_rv',
-            'mv': 'mv',
-            'av': 'av',
-            'tv': 'tv',
-            'pv': 'pv',
-        }
-        key = name_map.get(face_name, face_name)
-        return self.surface_paths[key]
+        # Convert XML face name to SurfaceName enum
+        surface_enum = SurfaceName.from_xml_face_name(face_name)
+        
+        if surface_enum is None:
+            raise KeyError(f"Unknown XML face name: {face_name}")
+        
+        if surface_enum not in self.surface_paths:
+            raise KeyError(f"Surface {surface_enum.value} not found in surface_paths")
+        
+        return self.surface_paths[surface_enum]
     
     def _create_equation(self, output_alias, boundary_conditions):
         """Create a heat equation XML element for Laplace problem.
@@ -417,13 +429,10 @@ class LaplaceSolver:
         Raises:
             ValueError: If required surfaces are missing.
         """
-        if method == "bayer":
-            required = {'epi', 'endo_lv', 'endo_rv', 'base', 'epi_apex'}
-        elif method == "doste":
-            required = {'epi', 'endo_lv', 'endo_rv', 'epi_apex', 'mv', 'av', 'tv', 'pv'}
-        else:
-            raise ValueError(f"Unknown method: {method}. Use 'bayer' or 'doste'.")
+        required = SurfaceName.get_required_for_method(method)
+        available = set(self.surface_paths.keys())
         
-        missing = required - set(self.surface_paths.keys())
+        missing = required - available
         if missing:
-            raise ValueError(f"Missing required surfaces for {method} method: {missing}")
+            missing_names = [s.value for s in missing]
+            raise ValueError(f"Missing required surfaces for {method} method: {missing_names}")

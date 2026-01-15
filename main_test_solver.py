@@ -1,16 +1,20 @@
 #!/usr/bin/env python
 # -*-coding:utf-8 -*-
-"""Test script for the LaplaceSolver class.
+"""Test script for the OO implementation of LaplaceSolver and SurfaceProcessor.
 
-This script tests the LaplaceSolver class by running the Laplace solver
-on example meshes using both Bayer and Doste methods, and compares
-the result_001.vtu outputs with reference results in example_og/.
+This script tests the object-oriented implementation by:
+1. Using SurfaceProcessor to generate epi_apex surfaces
+2. Using LaplaceSolver with SurfaceName enums
+3. Running the Laplace solver on example meshes using both Bayer and Doste methods
+4. Comparing the result_001.vtu outputs with reference results in example_og/.
 """
 
 import os
 import argparse
 import numpy as np
 import pyvista as pv
+from src.SurfaceNames import SurfaceName
+from src.SurfaceProcessor import SurfaceProcessor
 from src.LaplaceSolver import LaplaceSolver
 
 
@@ -102,10 +106,10 @@ def print_comparison_results(results, method_name):
     return all_passed
 
 
-def test_bayer_method(run_solver=True):
-    """Test LaplaceSolver with the Bayer method."""
+def test_bayer_method(run_solver=True, generate_apex=True):
+    """Test OO implementation with the Bayer method."""
     print("\n" + "="*60)
-    print("Testing LaplaceSolver with BAYER method")
+    print("Testing OO Implementation - BAYER method")
     print("="*60 + "\n")
     
     # Paths - use example_og for input data
@@ -114,18 +118,35 @@ def test_bayer_method(run_solver=True):
     outdir = os.path.abspath("example_og/truncated/output_bayer_test")
     ref_dir = os.path.abspath("example_og/truncated/output_b")
     
-    # Surface paths (full paths)
+    # Surface filenames (not full paths)
+    surface_filenames = {
+        SurfaceName.EPI: 'EPI.vtp',
+        SurfaceName.EPI_APEX: 'EPI_APEX.vtp',
+        SurfaceName.BASE: 'BASE.vtp',
+        SurfaceName.ENDO_LV: 'LV.vtp',
+        SurfaceName.ENDO_RV: 'RV.vtp',
+    }
+    
+    # Generate epi_apex surface if needed
+    if generate_apex:
+        print("Generating epi_apex surface using SurfaceProcessor...")
+        processor = SurfaceProcessor(surfaces_dir, surface_filenames)
+        processor.generate_epi_apex()
+        print("  ✓ Epi apex surface generated")
+    
+    # Surface paths (full paths) for LaplaceSolver
     surface_paths = {
-        'epi': os.path.join(surfaces_dir, 'EPI.vtp'),
-        'epi_apex': os.path.join(surfaces_dir, 'EPI_APEX.vtp'),
-        'base': os.path.join(surfaces_dir, 'BASE.vtp'),
-        'endo_lv': os.path.join(surfaces_dir, 'LV.vtp'),
-        'endo_rv': os.path.join(surfaces_dir, 'RV.vtp'),
+        SurfaceName.EPI: os.path.join(surfaces_dir, surface_filenames[SurfaceName.EPI]),
+        SurfaceName.EPI_APEX: os.path.join(surfaces_dir, surface_filenames[SurfaceName.EPI_APEX]),
+        SurfaceName.BASE: os.path.join(surfaces_dir, surface_filenames[SurfaceName.BASE]),
+        SurfaceName.ENDO_LV: os.path.join(surfaces_dir, surface_filenames[SurfaceName.ENDO_LV]),
+        SurfaceName.ENDO_RV: os.path.join(surfaces_dir, surface_filenames[SurfaceName.ENDO_RV]),
     }
     
     svfsi_exec = "svmultiphysics "
     
-    # Create LaplaceSolver
+    # Create LaplaceSolver with SurfaceName enums
+    print("\nCreating LaplaceSolver with SurfaceName enums...")
     solver = LaplaceSolver(
         mesh_path=mesh_path,
         surface_paths=surface_paths,
@@ -138,10 +159,11 @@ def test_bayer_method(run_solver=True):
     
     # Run the solver
     if run_solver:
+        print("\nRunning Laplace solver...")
         laplace_results_file = solver.run("bayer", outdir)
     else:
         laplace_results_file = os.path.join(outdir, 'result_001.vtu')
-        print(f"Skipping solver, expecting results at: {laplace_results_file}")
+        print(f"\nSkipping solver, expecting results at: {laplace_results_file}")
     
     # Compare with reference output
     ref_results_file = os.path.join(ref_dir, "result_001.vtu")
@@ -167,10 +189,10 @@ def test_bayer_method(run_solver=True):
     return test_mesh, passed
 
 
-def test_doste_method(run_solver=True):
-    """Test LaplaceSolver with the Doste method."""
+def test_doste_method(run_solver=True, generate_apex=True):
+    """Test OO implementation with the Doste method."""
     print("\n" + "="*60)
-    print("Testing LaplaceSolver with DOSTE method")
+    print("Testing OO Implementation - DOSTE method")
     print("="*60 + "\n")
     
     # Paths - use example_og for input data
@@ -179,22 +201,43 @@ def test_doste_method(run_solver=True):
     outdir = os.path.abspath("example_og/ot/output_doste_test")
     ref_dir = os.path.abspath("example_og/ot/output_d")
     
-    # Surface paths (full paths)
+    # Surface filenames (not full paths)
+    surface_filenames = {
+        SurfaceName.EPI: 'epi.vtp',
+        SurfaceName.EPI_APEX: 'epi_apex.vtp',
+        SurfaceName.AV: 'av.vtp',
+        SurfaceName.MV: 'mv.vtp',
+        SurfaceName.TV: 'tv.vtp',
+        SurfaceName.PV: 'pv.vtp',
+        SurfaceName.BASE: 'top.vtp',
+        SurfaceName.ENDO_LV: 'endo_lv.vtp',
+        SurfaceName.ENDO_RV: 'endo_rv.vtp',
+    }
+    
+    # Generate epi_apex surface if needed
+    if generate_apex:
+        print("Generating epi_apex surface using SurfaceProcessor...")
+        processor = SurfaceProcessor(surfaces_dir, surface_filenames)
+        processor.generate_epi_apex()
+        print("  ✓ Epi apex surface generated")
+    
+    # Surface paths (full paths) for LaplaceSolver
     surface_paths = {
-        'epi': os.path.join(surfaces_dir, 'epi.vtp'),
-        'epi_apex': os.path.join(surfaces_dir, 'epi_apex.vtp'),
-        'av': os.path.join(surfaces_dir, 'av.vtp'),
-        'mv': os.path.join(surfaces_dir, 'mv.vtp'),
-        'tv': os.path.join(surfaces_dir, 'tv.vtp'),
-        'pv': os.path.join(surfaces_dir, 'pv.vtp'),
-        'base': os.path.join(surfaces_dir, 'top.vtp'),
-        'endo_lv': os.path.join(surfaces_dir, 'endo_lv.vtp'),
-        'endo_rv': os.path.join(surfaces_dir, 'endo_rv.vtp'),
+        SurfaceName.EPI: os.path.join(surfaces_dir, surface_filenames[SurfaceName.EPI]),
+        SurfaceName.EPI_APEX: os.path.join(surfaces_dir, surface_filenames[SurfaceName.EPI_APEX]),
+        SurfaceName.AV: os.path.join(surfaces_dir, surface_filenames[SurfaceName.AV]),
+        SurfaceName.MV: os.path.join(surfaces_dir, surface_filenames[SurfaceName.MV]),
+        SurfaceName.TV: os.path.join(surfaces_dir, surface_filenames[SurfaceName.TV]),
+        SurfaceName.PV: os.path.join(surfaces_dir, surface_filenames[SurfaceName.PV]),
+        SurfaceName.BASE: os.path.join(surfaces_dir, surface_filenames[SurfaceName.BASE]),
+        SurfaceName.ENDO_LV: os.path.join(surfaces_dir, surface_filenames[SurfaceName.ENDO_LV]),
+        SurfaceName.ENDO_RV: os.path.join(surfaces_dir, surface_filenames[SurfaceName.ENDO_RV]),
     }
     
     svfsi_exec = "svmultiphysics "
     
-    # Create LaplaceSolver
+    # Create LaplaceSolver with SurfaceName enums
+    print("\nCreating LaplaceSolver with SurfaceName enums...")
     solver = LaplaceSolver(
         mesh_path=mesh_path,
         surface_paths=surface_paths,
@@ -207,10 +250,11 @@ def test_doste_method(run_solver=True):
     
     # Run the solver
     if run_solver:
+        print("\nRunning Laplace solver...")
         laplace_results_file = solver.run("doste", outdir)
     else:
         laplace_results_file = os.path.join(outdir, 'result_001.vtu')
-        print(f"Skipping solver, expecting results at: {laplace_results_file}")
+        print(f"\nSkipping solver, expecting results at: {laplace_results_file}")
     
     # Compare with reference output
     ref_results_file = os.path.join(ref_dir, "result_001.vtu")
@@ -237,7 +281,7 @@ def test_doste_method(run_solver=True):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Test LaplaceSolver class")
+    parser = argparse.ArgumentParser(description="Test OO implementation (LaplaceSolver and SurfaceProcessor)")
     parser.add_argument(
         "--method", 
         choices=["bayer", "doste", "both"],
@@ -249,17 +293,23 @@ if __name__ == "__main__":
         action="store_true",
         help="Skip running the solver, compare existing results"
     )
+    parser.add_argument(
+        "--no-apex",
+        action="store_true",
+        help="Skip generating epi_apex surface (assume it already exists)"
+    )
     args = parser.parse_args()
     
     run_solver = not args.no_run
+    generate_apex = not args.no_apex
     results = {}
     
     if args.method in ["bayer", "both"]:
-        _, passed = test_bayer_method(run_solver)
+        _, passed = test_bayer_method(run_solver, generate_apex)
         results["bayer"] = passed
         
     if args.method in ["doste", "both"]:
-        _, passed = test_doste_method(run_solver)
+        _, passed = test_doste_method(run_solver, generate_apex)
         results["doste"] = passed
     
     # Final summary
