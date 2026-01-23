@@ -8,3 +8,4 @@ result_*.vtu
 .DS_Store
 __pycache__/
 output*/
+*.vtu

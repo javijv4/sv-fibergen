@@ -220,26 +220,26 @@ class LaplaceSolver:
             list: List of (alias, boundary_conditions) tuples.
         """
         return [
-            # Phi_BiV_EPI: Transmural field (epi=1, endo=0)
-            ("Phi_BiV_EPI", [
+            # Trans_EPI: Transmural field (epi=1, endo=0)
+            ("Trans_EPI", [
                 ("epi", 1.0),
                 ("endo_lv", 0.0),
                 ("endo_rv", 0.0),
             ]),
-            # Phi_BiV_LV: LV field (lv_endo=1, others=0)
-            ("Phi_BiV_LV", [
+            # Trans_LV: LV field (lv_endo=1, others=0)
+            ("Trans_LV", [
                 ("endo_lv", 1.0),
                 ("endo_rv", 0.0),
                 ("epi", 0.0),
             ]),
-            # Phi_BiV_RV: RV field (rv_endo=1, others=0)
-            ("Phi_BiV_RV", [
+            # Trans_RV: RV field (rv_endo=1, others=0)
+            ("Trans_RV", [
                 ("endo_rv", 1.0),
                 ("endo_lv", 0.0),
                 ("epi", 0.0),
             ]),
-            # Phi_BiV_AB: Apex-to-base field (base=1, apex=0)
-            ("Phi_BiV_AB", [
+            # Long_AB: Apex-to-base field (base=1, apex=0)
+            ("Long_AB", [
                 ("epi_top", 1.0),
                 ("epi_apex", 0.0),
             ]),
@@ -409,6 +409,7 @@ class LaplaceSolver:
         
         # Generate XML configuration
         xml_path = self.generate_solver_xml(method, output_dir)
+        print(f"Generated solver XML at: {xml_path}")
         
         if delete_xml:
             os.remove(xml_path)

@@ -58,7 +58,7 @@
 	</Output>
 
 	<Output type="Alias" >
-		<Temperature> Phi_BiV_EPI </Temperature>
+		<Temperature> Trans_EPI </Temperature>
 	</Output>
 
 	<LS type="CG" >
@@ -103,7 +103,7 @@
 	</Output>
 
 	<Output type="Alias" >
-		<Temperature> Phi_BiV_LV </Temperature>
+		<Temperature> Trans_LV </Temperature>
 	</Output>
 
 	<LS type="CG" >
@@ -148,7 +148,7 @@
 	</Output>
 
 	<Output type="Alias" >
-		<Temperature> Phi_BiV_RV </Temperature>
+		<Temperature> Trans_RV </Temperature>
 	</Output>
 
 	<LS type="CG" >
@@ -193,7 +193,7 @@
 	</Output>
 
 	<Output type="Alias" >
-		<Temperature> Phi_BiV_AB </Temperature>
+		<Temperature> Long_AB </Temperature>
 	</Output>
 
 	<LS type="CG" >

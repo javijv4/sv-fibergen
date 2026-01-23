@@ -6,7 +6,7 @@ This script tests the object-oriented implementation by:
 1. Using SurfaceProcessor to generate epi_apex surfaces
 2. Using LaplaceSolver with SurfaceName enums
 3. Running the Laplace solver on example meshes using both Bayer and Doste methods
-4. Comparing the result_001.vtu outputs with reference results in example_og/.
+4. Comparing the result_001.vtu outputs with reference results in example/.
 """
 
 import os
@@ -19,7 +19,7 @@ from src.LaplaceSolver import LaplaceSolver
 
 
 # Fields expected in each method's result_001.vtu
-BAYER_FIELDS = ['Phi_BiV_EPI', 'Phi_BiV_LV', 'Phi_BiV_RV', 'Phi_BiV_AB']
+BAYER_FIELDS = ['Trans_EPI', 'Trans_LV', 'Trans_RV', 'Long_AB']
 DOSTE_FIELDS = ['Trans_BiV', 'Long_AV', 'Long_MV', 'Long_PV', 'Long_TV', 
                 'Weight_LV', 'Weight_RV', 'Trans_EPI', 'Trans_LV', 'Trans_RV']
 
@@ -112,11 +112,11 @@ def test_bayer_method(run_solver=True, generate_apex=True):
     print("Testing OO Implementation - BAYER method")
     print("="*60 + "\n")
     
-    # Paths - use example_og for input data
-    mesh_path = os.path.abspath("example_og/truncated/VOLUME.vtu")
+    # Paths - use example for input data
+    mesh_path = os.path.abspath("example/truncated/VOLUME.vtu")
     surfaces_dir = os.path.join(os.path.dirname(mesh_path), "mesh-surfaces")
-    outdir = os.path.abspath("example_og/truncated/output_bayer_test")
-    ref_dir = os.path.abspath("example_og/truncated/output_b")
+    outdir = os.path.abspath("example/truncated/output_bayer_test")
+    ref_dir = os.path.abspath("example/truncated/output_b")
     
     # Surface filenames (not full paths)
     surface_filenames = {
@@ -195,11 +195,11 @@ def test_doste_method(run_solver=True, generate_apex=True):
     print("Testing OO Implementation - DOSTE method")
     print("="*60 + "\n")
     
-    # Paths - use example_og for input data
-    mesh_path = os.path.abspath("example_og/ot/mesh-complete.mesh.vtu")
+    # Paths - use example for input data
+    mesh_path = os.path.abspath("example/ot/mesh-complete.mesh.vtu")
     surfaces_dir = os.path.join(os.path.dirname(mesh_path), "mesh-surfaces")
-    outdir = os.path.abspath("example_og/ot/output_doste_test")
-    ref_dir = os.path.abspath("example_og/ot/output_d")
+    outdir = os.path.abspath("example/ot/output_doste_test")
+    ref_dir = os.path.abspath("example/ot/output_d")
     
     # Surface filenames (not full paths)
     surface_filenames = {

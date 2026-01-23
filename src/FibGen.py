@@ -251,10 +251,10 @@ def loadLaplaceSolnBayer(fileName):
     Args:
         fileName: Path to the .vtu file with the Laplace solution. The solution
             should be defined at the nodes. Expected field names:
-            - Phi_BiV_EPI: Endocardial-epicardial transmural field
-            - Phi_BiV_LV: Left ventricle field
-            - Phi_BiV_RV: Right ventricle field
-            - Phi_BiV_AB: Apex-to-base field
+            - Trans_EPI: Endocardial-epicardial transmural field
+            - Trans_LV: Left ventricle field
+            - Trans_RV: Right ventricle field
+            - Long_AB: Apex-to-base field
     
     Returns:
         tuple: A tuple containing:
@@ -269,10 +269,10 @@ def loadLaplaceSolnBayer(fileName):
             - cGPhiAB: Gradient of apex-base field (N, 3)
     """
 
-    DATASTR1 = 'Phi_BiV_EPI'
-    DATASTR2 = 'Phi_BiV_LV'
-    DATASTR3 = 'Phi_BiV_RV'
-    DATASTR4 = 'Phi_BiV_AB'
+    DATASTR1 = 'Trans_EPI'
+    DATASTR2 = 'Trans_LV'
+    DATASTR3 = 'Trans_RV'
+    DATASTR4 = 'Long_AB'
 
     print("   Loading Laplace solution <---   %s" % (fileName))
 
