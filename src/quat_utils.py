@@ -90,86 +90,6 @@ def quat_multiply_batch(q1, q2):
     return result
 
 def find_best_quaternions(Q1, Q2):
-    """Find the best quaternion representations from rotation matrices.
-    
-    Converts Q1 to quaternion q1, then finds the best representation of q1
-    by testing 8 variations (original and 180-degree rotations about the local 
-    basis vectors of Q1) to find the one closest to q2 (largest absolute dot product).
-    
-    Args:
-        Q1: Reference rotation matrix to rotate (N, 3, 3).
-        Q2: Target rotation matrix (N, 3, 3).
-    
-    Returns:
-        tuple: (q1_best, q2) where both are (N, 4) quaternions [w, x, y, z].
-    """
-    n = Q1.shape[0]
-    
-    # Convert rotation matrices to quaternions
-    q1 = rotm_to_quat_batch(Q1)
-    q2 = rotm_to_quat_batch(Q2)
-    
-    
-    # Extract basis vectors (columns of Q1)
-    e0 = Q1[:, :, 0]  # First column (N, 3)
-    e1 = Q1[:, :, 1]  # Second column (N, 3)
-    e2 = Q1[:, :, 2]  # Third column (N, 3)
-    
-    # Create quaternions for 180° rotations about each local basis vector
-    # For 180° rotation about unit vector v: q = [0, vx, vy, vz]
-    q_180_e0 = np.zeros((n, 4), dtype=float)
-    q_180_e0[:, 1:] = e0
-    q_180_e0 /= np.linalg.norm(q_180_e0, axis=1, keepdims=True)
-    
-    q_180_e1 = np.zeros((n, 4), dtype=float)
-    q_180_e1[:, 1:] = e1
-    q_180_e1 /= np.linalg.norm(q_180_e1, axis=1, keepdims=True)
-    
-    q_180_e2 = np.zeros((n, 4), dtype=float)
-    q_180_e2[:, 1:] = e2
-    q_180_e2 /= np.linalg.norm(q_180_e2, axis=1, keepdims=True)
-    
-    # Generate 8 candidate quaternions for each element by rotating q1
-    candidates = np.zeros((n, 4, 4), dtype=float)
-    
-    # Option 0: Original (no rotation)
-    candidates[:, 0] = q1
-    
-    # Option 1: Rotate 180° about e0
-    candidates[:, 1] = quat_multiply_batch(q_180_e0, q1)
-    
-    # Option 2: Rotate 180° about e1
-    candidates[:, 2] = quat_multiply_batch(q_180_e1, q1)
-    
-    # Option 3: Rotate 180° about e2
-    candidates[:, 3] = quat_multiply_batch(q_180_e2, q1)
-    
-    # # Option 4: Rotate 180° about e0, then e1
-    # candidates[:, 4] = quat_multiply_batch(q_180_e1, quat_multiply_batch(q_180_e0, q1))
-    
-    # # Option 5: Rotate 180° about e2, then e0
-    # candidates[:, 5] = quat_multiply_batch(q_180_e0, quat_multiply_batch(q_180_e2, q1))
-    
-    # # Option 6: Rotate 180° about e1, then e2
-    # candidates[:, 6] = quat_multiply_batch(q_180_e2, quat_multiply_batch(q_180_e1, q1))
-    
-    # # Option 7: Rotate 180° about all three axes
-    # candidates[:, 7] = quat_multiply_batch(q_180_e2, quat_multiply_batch(q_180_e1, quat_multiply_batch(q_180_e0, q1)))
-    
-    # Compute dot products with q2 for all candidates
-    dots = np.einsum('ni,nci->nc', q2, candidates)
-    print(dots)
-    
-    # Find the candidate with the largest dot product
-    best_idx = np.argmax(np.abs(dots), axis=1)
-    
-    # Select best quaternion for each element
-    q1_best = candidates[np.arange(n), best_idx]
-    
-    return q1_best, q2
-
-
-def find_best_quaternions_old(Q1, Q2):
     """Find the best quaternion representations from rotation matrices (vectorized).
     
     Args:
@@ -218,10 +138,4 @@ def find_best_quaternions_old(Q1, Q2):
     # Select best quaternion for each element
     q1_best = candidates[np.arange(n), best_idx]
     
-    # Ensure q1_best and q2 have positive dot product (shortest path)
-    dot_final = np.einsum('ni,ni->n', q1_best, q2)
-    neg_mask = dot_final < 0.0
-    q2_corrected = q2.copy()
-    q2_corrected[neg_mask] = -q2[neg_mask]
-
-    return q1_best, q2_corrected
+    return q1_best, q2

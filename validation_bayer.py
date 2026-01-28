@@ -55,7 +55,7 @@ if __name__ == "__main__":
     }
 
     outdir = "example/truncated/output_b_oo"
-    fiber_results = pv.read(outdir + "/results_bayer_old.vtu")
+    fiber_results = pv.read(outdir + "/results_bayer_2.vtu")
     f = fiber_results.cell_data['fiber']
     s = fiber_results.cell_data['sheet']
     n = fiber_results.cell_data['sheet-normal']
@@ -74,13 +74,6 @@ if __name__ == "__main__":
         "BETA_EPI": 0.0,
     })
 
-    fproj, eLproj, eTproj = fib_gen.generate_fibers({
-        "ALFA_END": 60.0,
-        "ALFA_EPI": -60.0,
-        "BETA_END": 0.0,
-        "BETA_EPI": 0.0,
-    })
-
     #%% Project fiber to the plane formed by eL and eC
     f_projected = project_to_plane(f, eL, eC)
 
@@ -93,7 +86,7 @@ if __name__ == "__main__":
     alpha_dot = np.abs(np.sum(eC * f_projected, axis=1))
     alpha_dot = np.clip(alpha_dot, 0, 1)  # Ensure values are within valid range
     abs_alpha_angle = np.rad2deg(np.arccos(alpha_dot))
-    sign_alpha = np.sign(np.sum(fproj * eL, axis=1))
+    sign_alpha = np.sign(np.sum(f_projected * eL, axis=1))
     alpha_angle = abs_alpha_angle * sign_alpha
 
     # Compare angles
@@ -109,12 +102,14 @@ if __name__ == "__main__":
     print(f"  Max absolute error: {np.max(np.abs(global_beta - beta_angle)):.3f} degrees")
     #%% Save validation results
     validation_mesh = fiber_results.copy(deep=True)
-    validation_mesh.clear_field_data()
+    validation_mesh.clear_cell_data()
 
     validation_mesh.cell_data['alpha_angle'] = alpha_angle
     validation_mesh.cell_data['beta_angle'] = beta_angle
     validation_mesh.cell_data['global_alpha'] = global_alpha
     validation_mesh.cell_data['global_beta'] = global_beta
+    validation_mesh.cell_data['alpha_diff'] = np.abs(global_alpha - alpha_angle)
+    validation_mesh.cell_data['beta_diff'] = np.abs(global_beta - beta_angle)
     validation_mesh.cell_data['f'] = f
     validation_mesh.cell_data['s'] = s
     validation_mesh.cell_data['n'] = n
@@ -122,11 +117,8 @@ if __name__ == "__main__":
     validation_mesh.cell_data['eC'] = eC
     validation_mesh.cell_data['eL'] = eL
     validation_mesh.cell_data['eT'] = eT
-    validation_mesh.cell_data['fproj'] = fproj
-    validation_mesh.cell_data['eLproj'] = eLproj
-    validation_mesh.cell_data['eTproj'] = eTproj
 
-    validation_mesh.save("validation_bayer_old.vtu")
+    validation_mesh.save("validation_bayer_new.vtu")
 
 
 

@@ -286,16 +286,16 @@ class FibGen:
         if correct_slerp:
             q1 = np.zeros((len(t), 4), dtype=float)
             q2 = np.zeros((len(t), 4), dtype=float)
-            q1, q2 = qu.find_best_quaternions_old(Q1, Q2)
+            q1, q2 = qu.find_best_quaternions(Q1, Q2)
             dot = np.einsum('ni,ni->n', q1, q2)
         else:
             q1 = qu.rotm_to_quat_batch(Q1)
             q2 = qu.rotm_to_quat_batch(Q2)
             dot = np.einsum('ni,ni->n', q1, q2)
-            if np.any(dot < 0.0):
-                neg_mask = dot < 0.0
-                q2[neg_mask] = -q2[neg_mask]
-                dot[neg_mask] = -dot[neg_mask]
+        if np.any(dot < 0.0):
+            neg_mask = dot < 0.0
+            q2[neg_mask] = -q2[neg_mask]
+            dot[neg_mask] = -dot[neg_mask]
             
         # SLERP weights
         dot_clipped = np.clip(dot, -1.0, 1.0)
@@ -368,7 +368,8 @@ class FibGenBayer(FibGen):
         
         return self.lap, self.grad
     
-    def generate_fibers(self, params):
+
+    def generate_fibers(self, params, flip_rv=True, correct_slerp=False):
         """Generate fiber directions using the Bayer method.
         
         Args:
@@ -391,35 +392,40 @@ class FibGenBayer(FibGen):
         
         # Interpolation factor between LV and RV
         d = self.lap['Trans_RV'] / (self.lap['Trans_LV'] + self.lap['Trans_RV'])
-        
-        # Septum angles (interpolated between LV and RV)
         alfaS = self.calculate_angle(d, params['ALFA_END'], -params['ALFA_END'])
         betaS = self.calculate_angle(d, params['BETA_END'], -params['BETA_END'])
-        
+                    
         # Wall angles (interpolated from endo to epi)
         alfaW = self.calculate_angle(self.lap['Trans_EPI'], params['ALFA_END'], params['ALFA_EPI'])
         betaW = self.calculate_angle(self.lap['Trans_EPI'], params['BETA_END'], params['BETA_EPI'])
         
         # Build LV and RV basis
         Q_LV0 = self.calculate_basis(self.grad['Long_AB'], -self.grad['Trans_LV'])
-        Q_LV = self.rotate_basis_matrix(Q_LV0, alfaS, betaS)
+        Q_LV = self.rotate_basis_matrix(Q_LV0, alfaS, np.abs(betaS))
+        f0 = Q_LV0[:, :, 0]
+        f = Q_LV[:, :, 0]
+        lv_angle = np.rad2deg(np.arccos(np.clip(np.einsum('ni,ni->n', f0, f), -1.0, 1.0)))
         
-        Q_RV0 = self.calculate_basis(self.grad['Long_AB'], self.grad['Trans_RV'])
-        Q_RV = self.rotate_basis_matrix(Q_RV0, alfaS, betaS)
+        Q_RV0 = self.calculate_basis(self.grad['Long_AB'], self.grad['Trans_RV']) # Note that gPhi_RV points the other way
+        Q_RV = self.rotate_basis_matrix(Q_RV0, alfaS, np.abs(betaS))    # Therefore, we need a minus in betaS
+        f0 = Q_RV0[:, :, 0]
+        f = Q_RV[:, :, 0]
+        rv_angle = np.rad2deg(np.arccos(np.clip(np.einsum('ni,ni->n', f0, f), -1.0, 1.0)))
         
         # Interpolate between LV and RV (endocardial layer)
-        Q_END = self.interpolate_basis(Q_LV, Q_RV, d, correct_slerp=False)
+        Q_END = self.interpolate_basis(Q_LV, Q_RV, d, correct_slerp=correct_slerp)
 
         # Flip circumferential and transmural directions in RV
-        Q_END[d > 0.5,:,0] = -Q_END[d > 0.5,:,0]
-        Q_END[d > 0.5,:,2] = -Q_END[d > 0.5,:,2]
+        if flip_rv:
+            Q_END[d > 0.5,:,0] = -Q_END[d > 0.5,:,0]
+            Q_END[d > 0.5,:,2] = -Q_END[d > 0.5,:,2]
         
         # Build epicardial basis
         Q_EPI0 = self.calculate_basis(self.grad['Long_AB'], self.grad['Trans_EPI'])
         Q_EPI = self.rotate_basis_matrix(Q_EPI0, alfaW, betaW)
         
         # Interpolate from endo to epi
-        FST = self.interpolate_basis(Q_END, Q_EPI, self.lap['Trans_EPI'], correct_slerp=False)
+        FST = self.interpolate_basis(Q_END, Q_EPI, self.lap['Trans_EPI'], correct_slerp=correct_slerp)
         
         F = FST[:, :, 0]  # Fiber direction
         S = FST[:, :, 1]  # Sheet normal
@@ -430,7 +436,9 @@ class FibGenBayer(FibGen):
         self.mesh.cell_data['sheet'] = T
         self.mesh.cell_data['sheet-normal'] = S
 
-        
+        self.mesh.cell_data['lv_helix_angle'] = lv_angle
+        self.mesh.cell_data['rv_helix_angle'] = rv_angle
+
         self.mesh.cell_data['d'] = d
         self.mesh.cell_data['alfaS'] = alfaS
         self.mesh.cell_data['betaS'] = betaS
@@ -469,219 +477,11 @@ class FibGenBayer(FibGen):
         self.mesh.cell_data['S'] = S
         self.mesh.cell_data['T'] = T
         
-        print("   Writing mesh to check.vtu")
-        self.mesh.save('check.vtu')
+        # print("   Writing mesh to check.vtu")
+        # self.mesh.save('check.vtu')
     
         return F, S, T
         
-
-    def generate_fibers_new(self, params):
-        """Generate fiber directions using the Bayer method.
-        
-        Args:
-            params: Dictionary with keys:
-                - ALFA_END: Endocardial helix angle (degrees)
-                - ALFA_EPI: Epicardial helix angle (degrees)
-                - BETA_END: Endocardial transverse angle (degrees)
-                - BETA_EPI: Epicardial transverse angle (degrees)
-        
-        Returns:
-            tuple: (F, S, T) fiber, sheet, and normal directions (N, 3) each.
-        """
-        if self.lap is None or self.grad is None:
-            raise ValueError("Must call load_laplace_results() first")
-        
-        # Convert parameters to radians (consistent with Doste method)
-        params = {k: np.deg2rad(v) for k, v in params.items()}
-                
-        print("   Computing fiber directions at cells")
-        
-        # Interpolation factor between LV and RV
-        trans_biv = self.lap['Trans_RV'] / (self.lap['Trans_LV'] + self.lap['Trans_RV'])
-        sep = np.abs(trans_biv - 0.5)
-        sep = (sep - np.min(sep)) / (np.max(sep) - np.min(sep))
-        alpha_septum = -self.lap['Trans_RV']*trans_biv + self.lap['Trans_LV']*(1-trans_biv)
-        print(alpha_septum[811948])
-        betaS = params['BETA_END'] * sep * self.lap['Trans_LV'] + params['BETA_EPI'] * sep * self.lap['Trans_RV']
-                
-        # Wall angles (interpolated from endo to epi)
-        alfaW = self.calculate_angle(self.lap['Trans_EPI'], params['ALFA_END'], params['ALFA_EPI'])
-        betaW = self.calculate_angle(self.lap['Trans_EPI'], params['BETA_END'], params['BETA_EPI'])
-        
-        # Build LV and RV basis
-        Q_LV0 = self.calculate_basis(self.grad['Long_AB'], -self.grad['Trans_LV'])
-        Q_LV = self.rotate_basis_matrix(Q_LV0, alpha_septum, betaS)
-        
-        Q_RV0 = self.calculate_basis(self.grad['Long_AB'], self.grad['Trans_RV'])
-        Q_RV = self.rotate_basis_matrix(Q_RV0, alpha_septum, betaS)
-        
-        # Interpolate between LV and RV (endocardial layer)
-        Q_END = self.interpolate_basis(Q_LV, Q_RV, trans_biv, correct_slerp=False)
-
-        # Flip circumferential and transmural directions in RV
-        Q_END[trans_biv > 0.5,:,0] = -Q_END[trans_biv > 0.5,:,0]
-        Q_END[trans_biv > 0.5,:,2] = -Q_END[trans_biv > 0.5,:,2]
-        
-        # Build epicardial basis
-        Q_EPI0 = self.calculate_basis(self.grad['Long_AB'], self.grad['Trans_EPI'])
-        Q_EPI = self.rotate_basis_matrix(Q_EPI0, alfaW, betaW)
-        
-        # Interpolate from endo to epi
-        FST = self.interpolate_basis(Q_END, Q_EPI, self.lap['Trans_EPI'], correct_slerp=False)
-        
-        F = FST[:, :, 0]  # Fiber direction
-        S = FST[:, :, 1]  # Sheet normal
-        T = FST[:, :, 2]  # Sheet direction
-
-        # Save to mesh cell data
-        self.mesh.cell_data['fiber'] = F
-        self.mesh.cell_data['sheet'] = T
-        self.mesh.cell_data['sheet-normal'] = S
-
-        
-        print(alpha_septum[811948])
-        self.mesh.cell_data['trans_biv'] = trans_biv
-        self.mesh.cell_data['sep'] = sep
-        self.mesh.cell_data['alfaS'] = alpha_septum
-        self.mesh.cell_data['betaS'] = betaS
-        self.mesh.cell_data['alfaW'] = alfaW
-        self.mesh.cell_data['betaW'] = betaW
-        
-        self.mesh.cell_data['eC_LV0'] = Q_LV0[:, :, 0]
-        self.mesh.cell_data['eL_LV0'] = Q_LV0[:, :, 1]
-        self.mesh.cell_data['eT_LV0'] = Q_LV0[:, :, 2]
-        
-        self.mesh.cell_data['eC_RV0'] = Q_RV0[:, :, 0]
-        self.mesh.cell_data['eL_RV0'] = Q_RV0[:, :, 1]
-        self.mesh.cell_data['eT_RV0'] = Q_RV0[:, :, 2]
-        
-        self.mesh.cell_data['eC_LV'] = Q_LV[:, :, 0]
-        self.mesh.cell_data['eL_LV'] = Q_LV[:, :, 1]
-        self.mesh.cell_data['eT_LV'] = Q_LV[:, :, 2]
-        
-        self.mesh.cell_data['eC_RV'] = Q_RV[:, :, 0]
-        self.mesh.cell_data['eL_RV'] = Q_RV[:, :, 1]
-        self.mesh.cell_data['eT_RV'] = Q_RV[:, :, 2]
-        
-        self.mesh.cell_data['eC_END'] = Q_END[:, :, 0]
-        self.mesh.cell_data['eL_END'] = Q_END[:, :, 1]
-        self.mesh.cell_data['eT_END'] = Q_END[:, :, 2]
-        
-        self.mesh.cell_data['eC_EPI0'] = Q_EPI0[:, :, 0]
-        self.mesh.cell_data['eL_EPI0'] = Q_EPI0[:, :, 1]
-        self.mesh.cell_data['eT_EPI0'] = Q_EPI0[:, :, 2]
-        
-        self.mesh.cell_data['eC_EPI'] = Q_EPI[:, :, 0]
-        self.mesh.cell_data['eL_EPI'] = Q_EPI[:, :, 1]
-        self.mesh.cell_data['eT_EPI'] = Q_EPI[:, :, 2]
-        
-        self.mesh.cell_data['F'] = F
-        self.mesh.cell_data['S'] = S
-        self.mesh.cell_data['T'] = T
-        
-        print("   Writing mesh to check.vtu")
-        self.mesh.save('check.vtu')
-    
-        return F, S, T
-        
-
-
-    #----------------------------------------------------------------------
-    def generate_fibers_old(self, params):
-        '''
-        Compute the fiber directions at the center of each cell
-        '''
-        params = {k: np.deg2rad(v) for k, v in params.items()}
-
-        numCells = self.mesh.GetNumberOfCells()
-
-        print("   Computing fiber directions at cells")
-        F = np.zeros((numCells, 3))
-        S = np.zeros((numCells, 3))
-        T = np.zeros((numCells, 3))
-
-        j = 1
-        k = 1
-        print ("      Progress "),
-
-        Q_LV_arr = np.zeros((numCells, 3))
-        Q_RV_arr = np.zeros((numCells, 3))
-        Q_END_arr = np.zeros((numCells, 3))
-        Q_EPI_arr = np.zeros((numCells, 3))
-        for iCell in range(0, numCells):
-            phiEP = self.lap['Trans_EPI'][iCell]
-            phiLV = self.lap['Trans_LV'][iCell]
-            phiRV = self.lap['Trans_RV'][iCell]
-
-            gPhiEP = self.grad['Trans_EPI'][iCell, :]
-            gPhiLV = self.grad['Trans_LV'][iCell, :]
-            gPhiRV = self.grad['Trans_RV'][iCell, :]
-            gPhiAB = self.grad['Long_AB'][iCell, :]
-
-            d = phiRV / (phiLV + phiRV)
-            alfaS = params['ALFA_END'] * (1 - d) - params['ALFA_END'] * d
-            betaS = params['BETA_END'] * (1 - d) - params['BETA_END'] * d
-            alfaW = params['ALFA_END'] * (1 - phiEP) + params['ALFA_EPI'] * phiEP
-            betaW = params['BETA_END'] * (1 - phiEP) + params['BETA_EPI'] * phiEP
-
-            Q_LV = axis(gPhiAB, - gPhiLV)
-            Q_LV = orient(Q_LV, alfaS, betaS)
-            Q_LV_arr[iCell, :] = Q_LV[:, 0]
-
-            Q_RV = axis(gPhiAB, gPhiRV)
-            Q_RV = orient(Q_RV, alfaS, betaS)
-            Q_RV_arr[iCell, :] = Q_RV[:, 0]
-            Q_END = bislerp(Q_LV, Q_RV, d)
-            Q_END_arr[iCell, :] = Q_END[:, 0]
-
-            Q_EPI = axis(gPhiAB, gPhiEP)
-            Q_EPI = orient(Q_EPI, alfaW, betaW)
-            Q_EPI_arr[iCell, :] = Q_EPI[:, 0]
-            FST = bislerp(Q_END, Q_EPI, phiEP)
-
-            F[iCell, :] = np.array([FST[0, 0], FST[1, 0], FST[2, 0]])
-            S[iCell, :] = np.array([FST[0, 1], FST[1, 1], FST[2, 1]])
-            T[iCell, :] = np.array([FST[0, 2], FST[1, 2], FST[2, 2]])
-            if iCell==j:
-                print ("%d%%  " % ((k-1)*10)),
-                k = k + 1
-                j = int(float((k-1)*numCells)/10.0)
-        print("[Done!]")
-
-        self.mesh.cell_data['fiber'] = F
-        self.mesh.cell_data['sheet'] = T
-        self.mesh.cell_data['sheet-normal'] = S
-
-        
-        self.mesh.cell_data['d'] = d
-        self.mesh.cell_data['alfaS'] = alfaS
-        self.mesh.cell_data['betaS'] = betaS
-        self.mesh.cell_data['alfaW'] = alfaW
-        self.mesh.cell_data['betaW'] = betaW
-        
-        self.mesh.cell_data['eC_LV'] = Q_LV_arr[:, 0]
-        self.mesh.cell_data['eL_LV'] = Q_LV_arr[:, 1]
-        self.mesh.cell_data['eT_LV'] = Q_LV_arr[:, 2]
-        
-        self.mesh.cell_data['eC_RV'] = Q_RV_arr[:, 0]
-        self.mesh.cell_data['eL_RV'] = Q_RV_arr[:, 1]
-        self.mesh.cell_data['eT_RV'] = Q_RV_arr[:, 2]
-        
-        self.mesh.cell_data['eC_END'] = Q_END_arr[:, 0]
-        self.mesh.cell_data['eL_END'] = Q_END_arr[:, 1]
-        self.mesh.cell_data['eT_END'] = Q_END_arr[:, 2]
-        
-        self.mesh.cell_data['eC_EPI'] = Q_EPI_arr[:, 0]
-        self.mesh.cell_data['eL_EPI'] = Q_EPI_arr[:, 1]
-        self.mesh.cell_data['eT_EPI'] = Q_EPI_arr[:, 2]
-        
-        self.mesh.cell_data['F'] = F
-        self.mesh.cell_data['S'] = S
-        self.mesh.cell_data['T'] = T
-
-        return F, S, T
-    
-
     def get_angle_fields(self, params):
         "Helper function to compute a global alpha and beta angle fields."
 
@@ -722,213 +522,6 @@ class FibGenBayer(FibGen):
         mesh_out.cell_data['FIB_DIR'] = self.mesh.cell_data['sheet-normal']
         mesh_out.save(os.path.join(outdir, "normal.vtu"))
 
-
-def normalize(u):
-    '''
-    Calculate the normalized vector of a given vector
-    '''
-    u_norm = np.linalg.norm(u)
-    if u_norm > 0.0:
-        return u / u_norm
-    return u
-
-def axis (u, v):
-    '''
-    Given two vectors u and v, compute an orthogonal matrix Q whose first
-    column is u, second column is othogonal to u in the direction of v, and
-    third column is orthogonal to both u and v.
-    '''
-
-    e1 = normalize(u)
-
-    e2 = v - (e1.dot(v)) * e1
-    e2 = normalize(e2)
-
-    e0 = np.cross(e1, e2)
-    e0 = normalize(e0)
-
-    Q  = np.zeros((3,3))
-    Q[:,0] = e0
-    Q[:,1] = e1
-    Q[:,2] = e2
-
-    return Q
-#----------------------------------------------------------------------
-
-#----------------------------------------------------------------------
-
-def slerp(q1: np.ndarray, q2: np.ndarray, t: float) -> np.ndarray:
-    """Spherical linear interpolation from `q1` to `q2` at `t`
-
-    Parameters
-    ----------
-    q1 : np.ndarray
-        Source quaternion
-    q2 : np.ndarray
-        Target quaternion
-    t : float
-        Interpolation factor, between 0 and 1
-
-    Returns
-    -------
-    np.ndarray
-        The spherical linear interpolation between `q1` and `q2` at `t`
-    """
-    dot = q1.dot(q2)
-    q3 = q2
-    if dot < 0.0:
-        dot = -dot
-        q3 = -q2
-
-    if dot < 0.9999:
-        angle = np.arccos(dot)
-        a = np.sin(angle * (1 - t)) / np.sin(angle)
-        b = np.sin(angle * t) / np.sin(angle)
-        return a * q1 + b * q3
-
-    # Angle is close to zero - do linear interpolation
-    return q1 * (1 - t) + q3 * t
-
-def orient(Q, alpha, beta):
-    '''
-    Given an orthogonal matrix Q, rotate it by alpha about the z-axis and
-    then by beta about the x-axis.
-    '''
-    ca = np.cos(alpha)
-    sa = np.sin(alpha)
-    cb = np.cos(beta)
-    sb = np.sin(beta)
-
-    Ra = np.array([ [ ca,  -sa,  0.0],
-                    [ sa,   ca,  0.0],
-                    [0.0,  0.0,  1.0]])
-
-    # Rb = np.array([ [1.0,  0.0,  0.0],
-    #                 [0.0,   cb,   sb],
-    #                 [0.0,  -sb,   cb]])
-    
-    Rb = np.array([ [cb,  0.0,  -sb],
-                    [0.0, 1.0,  0.0],
-                    [sb,  0.0,   cb]])
-
-    Qt = np.matmul(Q, np.matmul(Ra, Rb))
-
-    return Qt
-
-
-def rot2quat(R):
-    """
-    ROT2QUAT - Transform Rotation matrix into normalized quaternion.
-    Usage: q = rot2quat(R)
-    Input:
-    R - 3-by-3 Rotation matrix
-    Output:
-    q - 4-by-1 quaternion, with form [w x y z], where w is the scalar term.
-    """
-    tr = R[0, 0] + R[1, 1] + R[2, 2]
-
-    if tr > 0:
-        S = np.sqrt(tr + 1.0) * 2  # S=4*qw
-        qw = 0.25 * S
-        qx = (R[2, 1] - R[1, 2]) / S
-        qy = (R[0, 2] - R[2, 0]) / S
-        qz = (R[1, 0] - R[0, 1]) / S
-    elif (R[0, 0] > R[1, 1]) and (R[0, 0] > R[2, 2]):
-        S = np.sqrt(1.0 + R[0, 0] - R[1, 1] - R[2, 2]) * 2  # S=4*qx
-        qw = (R[2, 1] - R[1, 2]) / S
-        qx = 0.25 * S
-        qy = (R[0, 1] + R[1, 0]) / S
-        qz = (R[0, 2] + R[2, 0]) / S
-    elif R[1, 1] > R[2, 2]:
-        S = np.sqrt(1.0 + R[1, 1] - R[0, 0] - R[2, 2]) * 2  # S=4*qy
-        qw = (R[0, 2] - R[2, 0]) / S
-        qx = (R[0, 1] + R[1, 0]) / S
-        qy = 0.25 * S
-        qz = (R[1, 2] + R[2, 1]) / S
-    else:
-        S = np.sqrt(1.0 + R[2, 2] - R[0, 0] - R[1, 1]) * 2  # S=4*qz
-        qw = (R[1, 0] - R[0, 1]) / S
-        qx = (R[0, 2] + R[2, 0]) / S
-        qy = (R[1, 2] + R[2, 1]) / S
-        qz = 0.25 * S
-
-    return normalize(np.array([qw, qx, qy, qz]))
-#----------------------------------------------------------------------
-
-#----------------------------------------------------------------------
-def quat2rot(q: np.ndarray) -> np.ndarray:
-    """Convert quaternion to rotation matrix
-
-    Parameters
-    ----------
-    q : np.ndarray
-        Quaternion
-
-    Returns
-    -------
-    np.ndarray
-        Rotation matrix
-    """
-    R = np.zeros((3, 3))
-    w = q[0]
-    x = q[1]
-    y = q[2]
-    z = q[3]
-
-    x2 = x * x
-    y2 = y * y
-    z2 = z * z
-
-    wx = w * x
-    wy = w * y
-    wz = w * z
-
-    xy = x * y
-    xz = x * z
-
-    yz = y * z
-
-    R[0][0] = 1.0 - 2.0 * y2 - 2.0 * z2
-    R[1][0] = 2.0 * xy + 2.0 * wz
-    R[2][0] = 2.0 * xz - 2.0 * wy
-    R[0][1] = 2.0 * xy - 2.0 * wz
-    R[1][1] = 1.0 - 2.0 * x2 - 2.0 * z2
-    R[2][1] = 2.0 * yz + 2.0 * wx
-    R[0][2] = 2.0 * xz + 2.0 * wy
-    R[1][2] = 2.0 * yz - 2.0 * wx
-    R[2][2] = 1.0 - 2.0 * x2 - 2.0 * y2
-
-    return R
-
-def bislerp(Q_A, Q_B, t):
-    '''
-    :param Q_A: ndarray
-    :param Q_B: ndarray
-    :param t: float
-    :return: ndarray
-    Linear interpolation of two orthogonal matrices.
-    '''
-    qa = rot2quat(Q_A)
-    qb = rot2quat(Q_B)
-
-    quat_array = np.array([
-        [-qa[1], qa[0], qa[3], -qa[2]],
-        [-qa[2], -qa[3], qa[0], qa[1]],
-        [-qa[3], qa[2], -qa[1], qa[0]],
-    ])
-
-    qm = qa
-    max_dot = abs(qm.dot(qb))
-
-    for v in quat_array[0:]:
-        dot = abs(v.dot(qb))
-        if dot > max_dot:
-            max_dot = dot
-            qm = v
-
-    qm_slerp = slerp(qm, qb, t)
-
-    return quat2rot(qm_slerp)
 
 class FibGenDoste(FibGen):
     """Fiber generator using the Doste et al. (2019) method.
@@ -1064,13 +657,13 @@ class FibGenDoste(FibGen):
         # Septum angles
         sep = np.abs(lap['Trans_BiV'] - 0.5)
         sep = (sep - np.min(sep)) / (np.max(sep) - np.min(sep))
-        alpha_septum = alpha_lv_endo * sep * lap['Trans_LV'] + alpha_rv_endo * sep * lap['Trans_RV']
+        alfaS = alpha_lv_endo * sep * lap['Trans_LV'] + alpha_rv_endo * sep * lap['Trans_RV']
         beta_septum = params['BENDOLV'] * lap['Trans_LV'] * lv_weight + params['BENDORV'] * lap['Trans_RV'] * rv_weight
         
         return {
             'alpha_wall_lv': alpha_wall_lv, 'beta_wall_lv': beta_wall_lv,
             'alpha_wall_rv': alpha_wall_rv, 'beta_wall_rv': beta_wall_rv,
-            'alpha_septum': alpha_septum, 'beta_septum': beta_septum
+            'alfaS': alfaS, 'beta_septum': beta_septum
         }
     
     
@@ -1108,10 +701,10 @@ class FibGenDoste(FibGen):
         
         # Septum basis
         Qlv_sep = self.rotate_basis_rodriguez(
-            Q_lv, angles['alpha_septum'], angles['beta_septum']
+            Q_lv, angles['alfaS'], angles['beta_septum']
         )
         Qrv_sep = self.rotate_basis_rodriguez(
-            Q_rv, angles['alpha_septum'], angles['beta_septum']
+            Q_rv, angles['alfaS'], angles['beta_septum']
         )
         
         # Wall basis
@@ -1162,3 +755,18 @@ class FibGenDoste(FibGen):
         self.mesh.save('check.vtu')
         
         return F, S, T
+
+
+    def get_angle_fields(self, params):
+        "Helper function to compute a global alpha and beta angle fields."
+
+        # Interpolation factor between LV and RV
+        angles = self._compute_angles(params)
+
+        alpha_epi = angles['alpha_wall_lv'] * self.lap['Trans_BiV'] + angles['alpha_wall_rv'] * (1 - self.lap['Trans_BiV'])
+        beta_epi = angles['beta_wall_lv'] * self.lap['Trans_BiV'] + angles['beta_wall_rv'] * (1 - self.lap['Trans_BiV'])
+
+        alfa = angles['alfaS'] * (1 - self.lap['Trans_EPI']) + alpha_epi * self.lap['Trans_EPI']
+        beta = angles['beta_septum'] * (1 - self.lap['Trans_EPI']) + beta_epi * self.lap['Trans_EPI']
+        
+        return alfa, beta
