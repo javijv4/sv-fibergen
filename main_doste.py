@@ -16,7 +16,7 @@ import os
 import argparse
 import pyvista as pv
 from src.LaplaceSolver import LaplaceSolver
-from src.FibGenOO import FibGenDoste
+from src.FibGen import FibGenDoste
 from src.SurfaceNames import SurfaceName
 from time import time
 

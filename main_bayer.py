@@ -15,7 +15,7 @@ output directories, and solver executables.
 import os
 import pyvista as pv
 from src.LaplaceSolver import LaplaceSolver
-from src.FibGenOO import FibGenBayer
+from src.FibGen import FibGenBayer
 from src.SurfaceNames import SurfaceName
 from time import time
 

@@ -5,7 +5,7 @@ import os
 import numpy as np
 import pyvista as pv
 
-from src.FibGenOO import FibGenBayer
+from FibGen import FibGenBayer
 import matplotlib.pyplot as plt
 
 
