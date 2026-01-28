@@ -67,7 +67,8 @@ def calculate_alpha_beta_angles(f, eC, eL, eT):
 
 if __name__ == "__main__":
 
-    outdir = "example/truncated/output_b_oo"
+    outdir = "../example/truncated/output_b_oo"
+    save_vtu = True
 
     params_zero = {
         "ALFA_END": 0.0,
@@ -97,7 +98,6 @@ if __name__ == "__main__":
         "BETA_EPI": -20.0,
     }
 
-#%%
     # Read laplace solutions
     laplace_results_file = os.path.join(outdir, 'result_001.vtu')
 
@@ -139,7 +139,7 @@ if __name__ == "__main__":
     f_og, s_og, n_og = fib_gen.generate_fibers(params, correct_slerp=True, flip_rv=False)
     alpha_og, beta_og, f_projected = calculate_alpha_beta_angles(f_og, eC, eL, eT)
     
-#%%
+
     # Create figure with correlation plots
     fig, axes = plt.subplots(2, 2, figsize=(8, 7), constrained_layout=True)
     fig.suptitle(r'$\alpha$ and $\beta$ angle correlations', fontsize=16)
@@ -180,20 +180,20 @@ if __name__ == "__main__":
     axes[1, 1].set_ylabel('Calculated (degrees)')
     axes[1, 1].legend()
 
-    plt.savefig(os.path.join(outdir, 'angle_correlations.png'), dpi=150)
-    # plt.close()
+    plt.savefig('bayer_angle_correlations.png', dpi=150)
 
     # Save VTU file with all angle values
-    mesh = fib_gen.mesh.copy(deep=True)
-    mesh.clear_cell_data()
-    mesh['alpha_combined'] = alpha_combined
-    mesh['beta_combined'] = beta_combined
-    mesh['alpha_og'] = alpha_og
-    mesh['beta_og'] = beta_og
-    mesh['alpha_only_a'] = alpha_only_a
-    mesh['beta_only_a'] = beta_only_a
-    mesh['alpha_only_b'] = alpha_only_b
-    mesh['beta_only_b'] = beta_only_b
-    mesh['alpha_ref'] = ref_alpha_combined
-    mesh['beta_ref'] = ref_beta_combined
-    mesh.save('validation.vtu')
+    if save_vtu:
+        mesh = fib_gen.mesh.copy(deep=True)
+        mesh.clear_cell_data()
+        mesh['alpha_combined'] = alpha_combined
+        mesh['beta_combined'] = beta_combined
+        mesh['alpha_og'] = alpha_og
+        mesh['beta_og'] = beta_og
+        mesh['alpha_only_a'] = alpha_only_a
+        mesh['beta_only_a'] = beta_only_a
+        mesh['alpha_only_b'] = alpha_only_b
+        mesh['beta_only_b'] = beta_only_b
+        mesh['alpha_ref'] = ref_alpha_combined
+        mesh['beta_ref'] = ref_beta_combined
+        mesh.save('validation.vtu')
