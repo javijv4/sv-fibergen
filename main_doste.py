@@ -102,7 +102,7 @@ else:
     laplace_results_file = os.path.join(outdir, 'result_001.vtu')
 
 # Initialize fiber generator
-print("\nGenerating fibers using Doste method (OO)...")
+print("\nGenerating fibers using Doste method...")
 fib_gen = FibGenDoste()
 
 # Load Laplace results
@@ -116,7 +116,7 @@ fib_gen.mesh.cell_data['fibersLong'] = F
 fib_gen.mesh.cell_data['fibersSheet'] = S
 fib_gen.mesh.cell_data['fibersNormal'] = T
 
-print(f"generate fibers (Doste method OO) elapsed time: {time() - start:.3f} s")
+print(f"generate fibers (Doste method) elapsed time: {time() - start:.3f} s")
 
 # Save the result mesh
 result_mesh_path = os.path.join(outdir, "results_doste.vtu")

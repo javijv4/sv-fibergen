@@ -430,55 +430,6 @@ class FibGenBayer(FibGen):
         F = FST[:, :, 0]  # Fiber direction
         S = FST[:, :, 1]  # Sheet normal
         T = FST[:, :, 2]  # Sheet direction
-
-        # Save to mesh cell data
-        self.mesh.cell_data['fiber'] = F
-        self.mesh.cell_data['sheet'] = T
-        self.mesh.cell_data['sheet-normal'] = S
-
-        self.mesh.cell_data['lv_helix_angle'] = lv_angle
-        self.mesh.cell_data['rv_helix_angle'] = rv_angle
-
-        self.mesh.cell_data['d'] = d
-        self.mesh.cell_data['alfaS'] = alfaS
-        self.mesh.cell_data['betaS'] = betaS
-        self.mesh.cell_data['alfaW'] = alfaW
-        self.mesh.cell_data['betaW'] = betaW
-        
-        self.mesh.cell_data['eC_LV0'] = Q_LV0[:, :, 0]
-        self.mesh.cell_data['eL_LV0'] = Q_LV0[:, :, 1]
-        self.mesh.cell_data['eT_LV0'] = Q_LV0[:, :, 2]
-        
-        self.mesh.cell_data['eC_RV0'] = Q_RV0[:, :, 0]
-        self.mesh.cell_data['eL_RV0'] = Q_RV0[:, :, 1]
-        self.mesh.cell_data['eT_RV0'] = Q_RV0[:, :, 2]
-        
-        self.mesh.cell_data['eC_LV'] = Q_LV[:, :, 0]
-        self.mesh.cell_data['eL_LV'] = Q_LV[:, :, 1]
-        self.mesh.cell_data['eT_LV'] = Q_LV[:, :, 2]
-        
-        self.mesh.cell_data['eC_RV'] = Q_RV[:, :, 0]
-        self.mesh.cell_data['eL_RV'] = Q_RV[:, :, 1]
-        self.mesh.cell_data['eT_RV'] = Q_RV[:, :, 2]
-        
-        self.mesh.cell_data['eC_END'] = Q_END[:, :, 0]
-        self.mesh.cell_data['eL_END'] = Q_END[:, :, 1]
-        self.mesh.cell_data['eT_END'] = Q_END[:, :, 2]
-        
-        self.mesh.cell_data['eC_EPI0'] = Q_EPI0[:, :, 0]
-        self.mesh.cell_data['eL_EPI0'] = Q_EPI0[:, :, 1]
-        self.mesh.cell_data['eT_EPI0'] = Q_EPI0[:, :, 2]
-        
-        self.mesh.cell_data['eC_EPI'] = Q_EPI[:, :, 0]
-        self.mesh.cell_data['eL_EPI'] = Q_EPI[:, :, 1]
-        self.mesh.cell_data['eT_EPI'] = Q_EPI[:, :, 2]
-        
-        self.mesh.cell_data['F'] = F
-        self.mesh.cell_data['S'] = S
-        self.mesh.cell_data['T'] = T
-        
-        # print("   Writing mesh to check.vtu")
-        # self.mesh.save('check.vtu')
     
         return F, S, T
         
@@ -751,8 +702,8 @@ class FibGenDoste(FibGen):
         self.mesh.cell_data['S'] = S
         self.mesh.cell_data['T'] = T
         
-        print("   Writing mesh to check.vtu")
-        self.mesh.save('check.vtu')
+        # print("   Writing mesh to check.vtu")
+        # self.mesh.save('check.vtu')
         
         return F, S, T
 

@@ -151,7 +151,7 @@ if __name__ == "__main__":
     axes[0, 0].set_title(r'$\alpha=\pm 60, \beta=0$')
     axes[0, 0].set_xlabel('Reference (degrees)')
     axes[0, 0].set_ylabel('Calculated (degrees)')
-    axes[0, 0].legend()
+    axes[0, 0].legend(loc='upper left')
 
     # Beta Only
     axes[0, 1].scatter(ref_alpha_only_b, alpha_only_b, alpha=0.5, s=10, label=r'$\alpha$', color='blue')
@@ -160,7 +160,7 @@ if __name__ == "__main__":
     axes[0, 1].set_title(r'$\alpha=0, \beta=\pm 20$')
     axes[0, 1].set_xlabel('Reference (degrees)')
     axes[0, 1].set_ylabel('Calculated (degrees)')
-    axes[0, 1].legend()
+    axes[0, 1].legend(loc='upper left')
 
     # Combined
     axes[1, 0].scatter(ref_alpha_combined, alpha_combined, alpha=0.5, s=10, label=r'$\alpha$', color='blue')
@@ -169,7 +169,7 @@ if __name__ == "__main__":
     axes[1, 0].set_title(r'$\alpha=\pm 60, \beta=\pm 20$')
     axes[1, 0].set_xlabel('Reference (degrees)')
     axes[1, 0].set_ylabel('Calculated (degrees)')
-    axes[1, 0].legend()
+    axes[1, 0].legend(loc='upper left')
 
     # Original Bayer
     axes[1, 1].scatter(ref_alpha_combined, alpha_og, alpha=0.5, s=10, label=r'$\alpha$', color='blue')
@@ -178,7 +178,7 @@ if __name__ == "__main__":
     axes[1, 1].set_title(r'$\alpha=\pm 60, \beta=\pm 20$ - Original Bayer')
     axes[1, 1].set_xlabel('Reference (degrees)')
     axes[1, 1].set_ylabel('Calculated (degrees)')
-    axes[1, 1].legend()
+    axes[1, 1].legend(loc='upper left')
 
     plt.savefig('bayer_angle_correlations.png', dpi=150)
 
@@ -196,4 +196,4 @@ if __name__ == "__main__":
         mesh['beta_only_b'] = beta_only_b
         mesh['alpha_ref'] = ref_alpha_combined
         mesh['beta_ref'] = ref_beta_combined
-        mesh.save('validation.vtu')
+        mesh.save('validation_bayer.vtu')
