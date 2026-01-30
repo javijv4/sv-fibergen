@@ -303,7 +303,7 @@ $$
    - Extract: $\mathbf{f} = \mathbf{Q}[:, 0]$, $\mathbf{n} = \mathbf{Q}[:, 1]$, $\mathbf{s} = \mathbf{Q}[:, 2]$
 
 
-Note: the **bislerp** function performs a SLERP as the **interpolate_basis** function but it performs a correction that attempts to address the issue that fiber directions are equivalent even when vectors are flipped, i.e., for the purposes of the physic applications using  $\mathbf f$ or $-\mathbf f$ is equivalent. The correction consists in flipping each vector of the basis $\mathbf Q_1$ and checking which flipped basis is closer to the target $\mathbf Q_2$. However, this causes issues, especially when $\mathbf Q_1$ and $\mathbf Q_2$ form almost a 90 degree angle, which makes slight deviations in the basis produce completely different interpolated results.
+Note. The bislerp function performs the same SLERP operation as interpolate_basis, but includes an additional correction to account for the fact that fiber directions are equivalent up to sign; that is, for the physical applications considered, using $\mathbf{f}$ or $-\mathbf{f}$ is equivalent. This correction flips each vector of the basis $\mathbf{Q}_1$ and selects the flipped configuration that is closest to the target basis $\mathbf{Q}_2$. However, this approach can introduce issues (see the next section), particularly when $\mathbf{Q}_1$ and $\mathbf{Q}_2$ are nearly orthogonal. In such cases, small perturbations in the basis can lead to drastically different interpolation results.
 
 ### Modified algorithm steps
 When running the original implementation, we observed the resulting fibers showed discontinuities that arise due to the **bislerp** function. To solve these issues, we modify the algorithm as follows:
@@ -358,19 +358,19 @@ Ten Laplace problems are solved:
 1. $\phi_{\text{BiV}}$: RV endocardium → LV endocardium (interventricular)
 
 **Left Ventricle**:
-2. $\phi_{\text{LV,trans}}$: Epicardium → LV endocardium (LV transmural)
-3. $\phi_{\text{LV,av}}$: Aortic valve → apex (LV longitudinal from AV)
-4. $\phi_{\text{LV,mv}}$: Mitral valve → apex (LV longitudinal from MV)
-5. $\phi_{\text{LV,weight}}$: Aortic valve → mitral valve (LV valve weight)
+1. $\phi_{\text{LV,trans}}$: Epicardium → LV endocardium (LV transmural)
+2. $\phi_{\text{LV,av}}$: Aortic valve → apex (LV longitudinal from AV)
+3. $\phi_{\text{LV,mv}}$: Mitral valve → apex (LV longitudinal from MV)
+4. $\phi_{\text{LV,weight}}$: Aortic valve → mitral valve (LV valve weight)
 
 **Right Ventricle**:
-6. $\phi_{\text{RV,trans}}$: Epicardium → RV endocardium (RV transmural)
-7. $\phi_{\text{RV,pv}}$: Pulmonary valve → apex (RV longitudinal from PV)
-8. $\phi_{\text{RV,tv}}$: Tricuspid valve → apex (RV longitudinal from TV)
-9. $\phi_{\text{RV,weight}}$: Pulmonary valve → tricuspid valve (RV valve weight)
+1. $\phi_{\text{RV,trans}}$: Epicardium → RV endocardium (RV transmural)
+2. $\phi_{\text{RV,pv}}$: Pulmonary valve → apex (RV longitudinal from PV)
+3. $\phi_{\text{RV,tv}}$: Tricuspid valve → apex (RV longitudinal from TV)
+4. $\phi_{\text{RV,weight}}$: Pulmonary valve → tricuspid valve (RV valve weight)
 
 **Global**:
-10. $\phi_{\text{epi,trans}}$: Endocardia → epicardium (global transmural)
+1. $\phi_{\text{epi,trans}}$: LV and RV endocardium → epicardium (global transmural)
 
 ## Input Angles
 
