@@ -26,17 +26,17 @@ if __name__ == "__main__":
     ############  USER INPUTS  ################################
     ###########################################################
 
-    run_flag = False
+    run_flag = True
     svfsi_exec = "svmultiphysics "
 
     mesh_path = "example/truncated/VOLUME.vtu"
     outdir = "example/truncated/output_b_oo"
 
-    surface_paths = {SurfaceName.EPI: 'example/truncated/mesh-surfaces/EPI.vtp',
-                    SurfaceName.EPI_APEX: 'example/truncated/mesh-surfaces/EPI_APEX.vtp',
+    surface_paths = {SurfaceName.EPICARDIUM: 'example/truncated/mesh-surfaces/EPI.vtp',
+                    SurfaceName.EPICARDIUM_APEX: 'example/truncated/mesh-surfaces/EPI_APEX.vtp',
                     SurfaceName.BASE: 'example/truncated/mesh-surfaces/BASE.vtp',
-                    SurfaceName.ENDO_LV: 'example/truncated/mesh-surfaces/LV.vtp',
-                    SurfaceName.ENDO_RV: 'example/truncated/mesh-surfaces/RV.vtp'}
+                    SurfaceName.ENDOCARDIUM_LV: 'example/truncated/mesh-surfaces/LV.vtp',
+                    SurfaceName.ENDOCARDIUM_RV: 'example/truncated/mesh-surfaces/RV.vtp'}
 
     # Parameters for the Bayer et al. method https://doi.org/10.1007/s10439-012-0593-5. 
     params = {

@@ -33,11 +33,11 @@ class LaplaceSolver:
         >>> solver = LaplaceSolver(
         ...     mesh_path="/path/to/mesh.vtu",
         ...     surface_paths={
-        ...         SurfaceName.EPI: '/path/to/epi.vtp',
-        ...         SurfaceName.ENDO_LV: '/path/to/lv.vtp',
-        ...         SurfaceName.ENDO_RV: '/path/to/rv.vtp',
+        ...         SurfaceName.EPICARDIUM: '/path/to/epi.vtp',
+        ...         SurfaceName.ENDOCARDIUM_LV: '/path/to/lv.vtp',
+        ...         SurfaceName.ENDOCARDIUM_RV: '/path/to/rv.vtp',
         ...         SurfaceName.BASE: '/path/to/base.vtp',
-        ...         SurfaceName.EPI_APEX: '/path/to/apex.vtp',
+        ...         SurfaceName.EPICARDIUM_APEX: '/path/to/apex.vtp',
         ...     },
         ...     exec_svmultiphysics="svmultiphysics "
         ... )
@@ -55,8 +55,8 @@ class LaplaceSolver:
         Args:
             mesh_path: Path to the volumetric mesh file (.vtu).
             surface_paths: Dictionary mapping SurfaceName enum values to full file paths.
-                For Bayer method, required: SurfaceName.EPI, ENDO_LV, ENDO_RV, BASE, EPI_APEX
-                For Doste method, required: SurfaceName.EPI, ENDO_LV, ENDO_RV, EPI_APEX, MV, AV, TV, PV
+                For Bayer method, required: SurfaceName.EPICARDIUM, ENDOCARDIUM_LV, ENDOCARDIUM_RV, BASE, EPICARDIUM_APEX
+                For Doste method, required: SurfaceName.EPICARDIUM, ENDOCARDIUM_LV, ENDOCARDIUM_RV, EPICARDIUM_APEX, MITRAL_VALVE, AORTIC_VALVE, TRICUSPID_VALVE, PULMONARY_VALVE
             exec_svmultiphysics: Command to execute svMultiPhysics (e.g., "svmultiphysics ").
             
         Raises:

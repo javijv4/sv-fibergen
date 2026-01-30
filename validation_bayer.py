@@ -5,7 +5,7 @@ import os
 import numpy as np
 import pyvista as pv
 
-from FibGen import FibGenBayer
+from src.FibGen import FibGenBayer
 import matplotlib.pyplot as plt
 
 
@@ -67,7 +67,7 @@ def calculate_alpha_beta_angles(f, eC, eL, eT):
 
 if __name__ == "__main__":
 
-    outdir = "../example/truncated/output_b_oo"
+    outdir = "example/truncated/output_b_oo"
     save_vtu = True
 
     params_zero = {
@@ -145,8 +145,8 @@ if __name__ == "__main__":
     fig.suptitle(r'$\alpha$ and $\beta$ angle correlations', fontsize=16)
 
     # Alpha Only
-    axes[0, 0].scatter(ref_alpha_only_a, alpha_only_a, alpha=0.5, s=10, label=r'$\alpha$', color='blue')
-    axes[0, 0].scatter(ref_beta_only_a, beta_only_a, alpha=0.5, s=10, label=r'$\beta$', color='red')
+    axes[0, 0].scatter(ref_alpha_only_a, alpha_only_a, alpha=0.02, s=10, label=r'$\alpha$', color='blue')
+    axes[0, 0].scatter(ref_beta_only_a, beta_only_a, alpha=0.02, s=10, label=r'$\beta$', color='red')
     axes[0, 0].plot([-90, 90], [-90, 90], 'k--', lw=1)
     axes[0, 0].set_title(r'$\alpha=\pm 60, \beta=0$')
     axes[0, 0].set_xlabel('Reference (degrees)')
@@ -154,8 +154,8 @@ if __name__ == "__main__":
     axes[0, 0].legend(loc='upper left')
 
     # Beta Only
-    axes[0, 1].scatter(ref_alpha_only_b, alpha_only_b, alpha=0.5, s=10, label=r'$\alpha$', color='blue')
-    axes[0, 1].scatter(ref_beta_only_b, beta_only_b, alpha=0.5, s=10, label=r'$\beta$', color='red')
+    axes[0, 1].scatter(ref_alpha_only_b, alpha_only_b, alpha=0.02, s=10, label=r'$\alpha$', color='blue')
+    axes[0, 1].scatter(ref_beta_only_b, beta_only_b, alpha=0.02, s=10, label=r'$\beta$', color='red')
     axes[0, 1].plot([-90, 90], [-90, 90], 'k--', lw=1)
     axes[0, 1].set_title(r'$\alpha=0, \beta=\pm 20$')
     axes[0, 1].set_xlabel('Reference (degrees)')
@@ -163,8 +163,8 @@ if __name__ == "__main__":
     axes[0, 1].legend(loc='upper left')
 
     # Combined
-    axes[1, 0].scatter(ref_alpha_combined, alpha_combined, alpha=0.5, s=10, label=r'$\alpha$', color='blue')
-    axes[1, 0].scatter(ref_beta_combined, beta_combined, alpha=0.5, s=10, label=r'$\beta$', color='red')
+    axes[1, 0].scatter(ref_alpha_combined, alpha_combined, alpha=0.02, s=10, label=r'$\alpha$', color='blue')
+    axes[1, 0].scatter(ref_beta_combined, beta_combined, alpha=0.02, s=10, label=r'$\beta$', color='red')
     axes[1, 0].plot([-90, 90], [-90, 90], 'k--', lw=1)
     axes[1, 0].set_title(r'$\alpha=\pm 60, \beta=\pm 20$')
     axes[1, 0].set_xlabel('Reference (degrees)')
@@ -172,8 +172,8 @@ if __name__ == "__main__":
     axes[1, 0].legend(loc='upper left')
 
     # Original Bayer
-    axes[1, 1].scatter(ref_alpha_combined, alpha_og, alpha=0.5, s=10, label=r'$\alpha$', color='blue')
-    axes[1, 1].scatter(ref_beta_combined, beta_og, alpha=0.5, s=10, label=r'$\beta$', color='red')
+    axes[1, 1].scatter(ref_alpha_combined, alpha_og, alpha=0.02, s=10, label=r'$\alpha$', color='blue')
+    axes[1, 1].scatter(ref_beta_combined, beta_og, alpha=0.02, s=10, label=r'$\beta$', color='red')
     axes[1, 1].plot([-90, 90], [-90, 90], 'k--', lw=1)
     axes[1, 1].set_title(r'$\alpha=\pm 60, \beta=\pm 20$ - Original Bayer')
     axes[1, 1].set_xlabel('Reference (degrees)')

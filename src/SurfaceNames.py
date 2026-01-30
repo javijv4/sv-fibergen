@@ -13,25 +13,25 @@ class SurfaceName(Enum):
     """Enumeration of surface names for biventricular heart models.
     
     Attributes:
-        EPI: Epicardial surface
+        EPICARDIUM: Epicardial surface
         BASE: Base surface (all valves together)
-        EPI_APEX: Epicardial apex surface
-        ENDO_LV: Left ventricle endocardial surface
-        ENDO_RV: Right ventricle endocardial surface
-        MV: Mitral valve surface
-        AV: Aortic valve surface
-        TV: Tricuspid valve surface
-        PV: Pulmonary valve surface
+        EPICARDIUM_APEX: Epicardial apex surface
+        ENDOCARDIUM_LV: Left ventricle endocardial surface
+        ENDOCARDIUM_RV: Right ventricle endocardial surface
+        MITRAL_VALVE: Mitral valve surface
+        AORTIC_VALVE: Aortic valve surface
+        TRICUSPID_VALVE: Tricuspid valve surface
+        PULMONARY_VALVE: Pulmonary valve surface
     """
-    EPI = "epi"
+    EPICARDIUM = "epi"
     BASE = "base"
-    EPI_APEX = "epi_apex"
-    ENDO_LV = "endo_lv"
-    ENDO_RV = "endo_rv"
-    MV = "mv"
-    AV = "av"
-    TV = "tv"
-    PV = "pv"
+    EPICARDIUM_APEX = "epi_apex"
+    ENDOCARDIUM_LV = "endo_lv"
+    ENDOCARDIUM_RV = "endo_rv"
+    MITRAL_VALVE = "mv"
+    AORTIC_VALVE = "av"
+    TRICUSPID_VALVE = "tv"
+    PULMONARY_VALVE = "pv"
     
     @classmethod
     def from_xml_face_name(cls, xml_name):
@@ -45,15 +45,15 @@ class SurfaceName(Enum):
         """
         # Map XML face names to enum values
         xml_to_enum = {
-            'epi': cls.EPI,
+            'epi': cls.EPICARDIUM,
             'epi_top': cls.BASE,
-            'epi_apex': cls.EPI_APEX,
-            'endo_lv': cls.ENDO_LV,
-            'endo_rv': cls.ENDO_RV,
-            'mv': cls.MV,
-            'av': cls.AV,
-            'tv': cls.TV,
-            'pv': cls.PV,
+            'epi_apex': cls.EPICARDIUM_APEX,
+            'endo_lv': cls.ENDOCARDIUM_LV,
+            'endo_rv': cls.ENDOCARDIUM_RV,
+            'mv': cls.MITRAL_VALVE,
+            'av': cls.AORTIC_VALVE,
+            'tv': cls.TRICUSPID_VALVE,
+            'pv': cls.PULMONARY_VALVE,
         }
         return xml_to_enum.get(xml_name, None)
     
@@ -68,9 +68,9 @@ class SurfaceName(Enum):
             set: Set of required SurfaceName enum values.
         """
         if method == "bayer":
-            return {cls.EPI, cls.ENDO_LV, cls.ENDO_RV, cls.BASE, cls.EPI_APEX}
+            return {cls.EPICARDIUM, cls.ENDOCARDIUM_LV, cls.ENDOCARDIUM_RV, cls.BASE, cls.EPICARDIUM_APEX}
         elif method == "doste":
-            return {cls.EPI, cls.ENDO_LV, cls.ENDO_RV, cls.EPI_APEX, 
-                   cls.MV, cls.AV, cls.TV, cls.PV}
+            return {cls.EPICARDIUM, cls.ENDOCARDIUM_LV, cls.ENDOCARDIUM_RV, cls.EPICARDIUM_APEX, 
+                   cls.MITRAL_VALVE, cls.AORTIC_VALVE, cls.TRICUSPID_VALVE, cls.PULMONARY_VALVE}
         else:
             raise ValueError(f"Unknown method: {method}. Use 'bayer' or 'doste'.")

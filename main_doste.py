@@ -32,14 +32,14 @@ surfaces_dir = None  # default computed from mesh_path below
 outdir = "example/ot/output_d_oo"
 
 surface_paths = {
-    SurfaceName.EPI: 'example/ot/mesh-surfaces/epi.vtp',
-    SurfaceName.EPI_APEX: 'example/ot/mesh-surfaces/epi_apex.vtp',
-    SurfaceName.AV: 'example/ot/mesh-surfaces/av.vtp',
-    SurfaceName.MV: 'example/ot/mesh-surfaces/mv.vtp',
-    SurfaceName.TV: 'example/ot/mesh-surfaces/tv.vtp',
-    SurfaceName.PV: 'example/ot/mesh-surfaces/pv.vtp',
-    SurfaceName.ENDO_LV: 'example/ot/mesh-surfaces/endo_lv.vtp',
-    SurfaceName.ENDO_RV: 'example/ot/mesh-surfaces/endo_rv.vtp'
+    SurfaceName.EPICARDIUM: 'example/ot/mesh-surfaces/epi.vtp',
+    SurfaceName.EPICARDIUM_APEX: 'example/ot/mesh-surfaces/epi_apex.vtp',
+    SurfaceName.AORTIC_VALVE: 'example/ot/mesh-surfaces/av.vtp',
+    SurfaceName.MITRAL_VALVE: 'example/ot/mesh-surfaces/mv.vtp',
+    SurfaceName.TRICUSPID_VALVE: 'example/ot/mesh-surfaces/tv.vtp',
+    SurfaceName.PULMONARY_VALVE: 'example/ot/mesh-surfaces/pv.vtp',
+    SurfaceName.ENDOCARDIUM_LV: 'example/ot/mesh-surfaces/endo_lv.vtp',
+    SurfaceName.ENDOCARDIUM_RV: 'example/ot/mesh-surfaces/endo_rv.vtp'
 }
 
 # Parameters from the Doste paper https://doi.org/10.1002/cnm.3185
@@ -57,10 +57,10 @@ params = {
 
     # B = beta angle (this have an opposite sign to the Doste paper, 
     # but it's because the longitudinal direction is opposite)
-    'BENDORV': 0, #20,
-    'BEPIRV': 0, #-20,
-    'BENDOLV': 0, #20,
-    'BEPILV': 0, #-20,
+    'BENDORV': 20,
+    'BEPIRV': -20,
+    'BENDOLV': 20,
+    'BEPILV': -20,
 }
 
 

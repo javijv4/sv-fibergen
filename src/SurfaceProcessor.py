@@ -73,12 +73,12 @@ class SurfaceProcessor:
         global node and element IDs.
         
         The method requires:
-            - SurfaceName.EPI: Epicardial surface
+            - SurfaceName.EPICARDIUM: Epicardial surface
             - SurfaceName.BASE: Base surface (for finding apex)
-            - SurfaceName.EPI_APEX: Output surface name (will be created)
+            - SurfaceName.EPICARDIUM_APEX: Output surface name (will be created)
         """
         # Load the epi surface
-        epi_path = self.get_surface_path(SurfaceName.EPI)
+        epi_path = self.get_surface_path(SurfaceName.EPICARDIUM)
         epi_mesh = pv.read(epi_path)
         epi_points = epi_mesh.points
         epi_cells = epi_mesh.faces
@@ -139,5 +139,5 @@ class SurfaceProcessor:
         epi_apex_mesh.point_data.set_array(epi_apex_global_node_id, 'GlobalNodeID')
         epi_apex_mesh.cell_data.set_array(epi_apex_global_cell_id, 'GlobalElementID')
 
-        epi_apex_path = self.get_surface_path(SurfaceName.EPI_APEX)
+        epi_apex_path = self.get_surface_path(SurfaceName.EPICARDIUM_APEX)
         epi_apex_mesh.save(epi_apex_path)

@@ -62,7 +62,15 @@ class FibGen:
         return out
     
     def _minmax01(self, arr):
-        """Scale array to [0, 1] range."""
+        """Scale array to [0, 1] range.
+        
+        Args:
+            arr: Input array to scale.
+            
+        Returns:
+            np.ndarray: Scaled array with values in [0, 1]. If all values are equal,
+                returns array filled with 0.5.
+        """
         arr = np.asarray(arr, dtype=float)
         amin = np.min(arr)
         amax = np.max(arr)
@@ -93,7 +101,7 @@ class FibGen:
         
         return mesh
     
-    def calculate_basis(self, gL, gT):
+    def axis(self, gL, gT):
         """Construct orthogonal coordinate systems from two gradient fields.
         
         Creates an orthonormal basis [eC, eL, eT] for each element where:
@@ -146,7 +154,7 @@ class FibGen:
         """
         return endo_value * (1 - trans) + epi_value * trans
     
-    def rotate_basis_matrix(self, Q, alpha, beta):
+    def orient_matrix(self, Q, alpha, beta):
         """Apply alpha and beta rotations to orthogonal matrices.
         
         Rotates Q by alpha about the z-axis (transmural) and then
@@ -190,10 +198,10 @@ class FibGen:
         
         return Qt
 
-    def rotate_basis_rodriguez(self, Q, alpha, beta):
-        """Rotate basis using Rodriguez rotation formula (Doste method).
+    def orient_rodrigues(self, Q, alpha, beta):
+        """Rotate basis using Rodrigues rotation formula (Doste method).
         
-        Applies two successive rotations using Rodriguez formula:
+        Applies two successive rotations using Rodrigues formula:
         1. Rotate by alpha about the transmural axis (eT)
         2. Rotate by beta about the rotated longitudinal axis
         
@@ -274,6 +282,8 @@ class FibGen:
             Q1: Array of shape (N, 3, 3) containing starting rotation matrices.
             Q2: Array of shape (N, 3, 3) containing ending rotation matrices.
             t: Array of shape (N,) with interpolation values in [0, 1].
+            correct_slerp: If True, use quaternion correction to ensure shortest path.
+                Defaults to False.
         
         Returns:
             np.ndarray: Array of shape (N, 3, 3) containing interpolated rotation matrices.
@@ -328,7 +338,9 @@ class FibGen:
 class FibGenBayer(FibGen):
     """Fiber generator using the Bayer et al. (2012) method.
     
-    Suitable for truncated biventricular geometries with and without outflow tracts.
+    Suitable for truncated biventricular geometries. Implements the rule-based
+    algorithm described in Bayer et al. 2012:
+    https://doi.org/10.1007/s10439-012-0593-5
     """
     
     # Field names in Laplace solution
@@ -378,6 +390,10 @@ class FibGenBayer(FibGen):
                 - ALFA_EPI: Epicardial helix angle (degrees)
                 - BETA_END: Endocardial transverse angle (degrees)
                 - BETA_EPI: Epicardial transverse angle (degrees)
+            flip_rv: If True, flip circumferential and transmural directions in RV.
+                Defaults to True.
+            correct_slerp: If True, use quaternion correction for SLERP interpolation.
+                Defaults to False.
         
         Returns:
             tuple: (F, S, T) fiber, sheet, and normal directions (N, 3) each.
@@ -400,17 +416,11 @@ class FibGenBayer(FibGen):
         betaW = self.calculate_angle(self.lap['Trans_EPI'], params['BETA_END'], params['BETA_EPI'])
         
         # Build LV and RV basis
-        Q_LV0 = self.calculate_basis(self.grad['Long_AB'], -self.grad['Trans_LV'])
-        Q_LV = self.rotate_basis_matrix(Q_LV0, alfaS, np.abs(betaS))
-        f0 = Q_LV0[:, :, 0]
-        f = Q_LV[:, :, 0]
-        lv_angle = np.rad2deg(np.arccos(np.clip(np.einsum('ni,ni->n', f0, f), -1.0, 1.0)))
+        Q_LV0 = self.axis(self.grad['Long_AB'], -self.grad['Trans_LV'])
+        Q_LV = self.orient_matrix(Q_LV0, alfaS, np.abs(betaS))
         
-        Q_RV0 = self.calculate_basis(self.grad['Long_AB'], self.grad['Trans_RV']) # Note that gPhi_RV points the other way
-        Q_RV = self.rotate_basis_matrix(Q_RV0, alfaS, np.abs(betaS))    # Therefore, we need a minus in betaS
-        f0 = Q_RV0[:, :, 0]
-        f = Q_RV[:, :, 0]
-        rv_angle = np.rad2deg(np.arccos(np.clip(np.einsum('ni,ni->n', f0, f), -1.0, 1.0)))
+        Q_RV0 = self.axis(self.grad['Long_AB'], self.grad['Trans_RV']) 
+        Q_RV = self.orient_matrix(Q_RV0, alfaS, np.abs(betaS))    
         
         # Interpolate between LV and RV (endocardial layer)
         Q_END = self.interpolate_basis(Q_LV, Q_RV, d, correct_slerp=correct_slerp)
@@ -421,8 +431,8 @@ class FibGenBayer(FibGen):
             Q_END[d > 0.5,:,2] = -Q_END[d > 0.5,:,2]
         
         # Build epicardial basis
-        Q_EPI0 = self.calculate_basis(self.grad['Long_AB'], self.grad['Trans_EPI'])
-        Q_EPI = self.rotate_basis_matrix(Q_EPI0, alfaW, betaW)
+        Q_EPI0 = self.axis(self.grad['Long_AB'], self.grad['Trans_EPI'])
+        Q_EPI = self.orient_matrix(Q_EPI0, alfaW, betaW)
         
         # Interpolate from endo to epi
         FST = self.interpolate_basis(Q_END, Q_EPI, self.lap['Trans_EPI'], correct_slerp=correct_slerp)
@@ -430,11 +440,25 @@ class FibGenBayer(FibGen):
         F = FST[:, :, 0]  # Fiber direction
         S = FST[:, :, 1]  # Sheet normal
         T = FST[:, :, 2]  # Sheet direction
+        
+        self.mesh.cell_data['fiber'] = F
+        self.mesh.cell_data['sheet-normal'] = S
+        self.mesh.cell_data['sheet'] = T
     
         return F, S, T
         
     def get_angle_fields(self, params):
-        "Helper function to compute a global alpha and beta angle fields."
+        """Compute global alpha and beta angle fields.
+        
+        Helper function to compute spatially-varying helix and transverse angle fields
+        by interpolating between septum and wall values.
+        
+        Args:
+            params: Dictionary with angle parameters (in degrees or radians).
+            
+        Returns:
+            tuple: (alfa, beta) arrays of helix and transverse angles at each cell.
+        """
 
         # Interpolation factor between LV and RV
         d = self.lap['Trans_RV'] / (self.lap['Trans_LV'] + self.lap['Trans_RV'])
@@ -457,6 +481,16 @@ class FibGenBayer(FibGen):
 
 
     def write_fibers(self, outdir):
+        """Write fiber, sheet, and normal directions to VTU files.
+        
+        Saves three separate files with fiber directions stored in 'FIB_DIR' field:
+        - fiber.vtu: Fiber directions
+        - sheet.vtu: Sheet normal directions
+        - normal.vtu: Sheet-normal directions
+        
+        Args:
+            outdir: Output directory path where files will be saved.
+        """
         # Create a copy of the mesh without any data
         mesh_out = self.mesh.copy(deep=True)
         mesh_out.clear_data()
@@ -477,7 +511,9 @@ class FibGenBayer(FibGen):
 class FibGenDoste(FibGen):
     """Fiber generator using the Doste et al. (2019) method.
     
-    Suitable for biventricular geometries with outflow tracts.
+    Suitable for biventricular geometries with outflow tracts. Implements
+    the algorithm described in Doste et al. 2019:
+    https://doi.org/10.1002/cnm.3185
     """
     
     # Field names in Laplace solution
@@ -555,7 +591,7 @@ class FibGenDoste(FibGen):
                    grad['Long_AV'] * (1 - lap['Weight_LV'][:, None]))
 
         # Calculate LV basis
-        Q_lv = self.calculate_basis(lv_glong, grad['Trans_LV'])
+        Q_lv = self.axis(lv_glong, grad['Trans_LV'])
         eC_lv = Q_lv[:, :, 0]  # Circumferential
         eL_lv = Q_lv[:, :, 1]  # Longitudinal
         eT_lv = Q_lv[:, :, 2]  # Transmural
@@ -563,7 +599,7 @@ class FibGenDoste(FibGen):
         # Calculate combined RV longitudinal
         rv_glong = (grad['Long_TV'] * lap['Weight_RV'][:, None] + 
                    grad['Long_PV'] * (1 - lap['Weight_RV'][:, None]))
-        Q_rv = self.calculate_basis(rv_glong, grad['Trans_RV'])
+        Q_rv = self.axis(rv_glong, grad['Trans_RV'])
         eC_rv = Q_rv[:, :, 0]  # Circumferential
         eL_rv = Q_rv[:, :, 1]  # Longitudinal
         eT_rv = Q_rv[:, :, 2]  # Transmural
@@ -582,10 +618,14 @@ class FibGenDoste(FibGen):
         """Compute spatially-varying alpha and beta angles.
         
         Args:
-            params: Dictionary with angle parameters (in radians).
+            params: Dictionary with angle parameters (must be in radians).
         
         Returns:
-            dict: Dictionary of angle arrays.
+            dict: Dictionary of angle arrays including:
+                - alpha_wall_lv, alpha_wall_rv: Wall helix angles for LV/RV
+                - beta_wall_lv, beta_wall_rv: Wall transverse angles for LV/RV
+                - alfaS: Septum helix angle
+                - beta_septum: Septum transverse angle
         """
         lap = self.lap
         
@@ -651,18 +691,18 @@ class FibGenDoste(FibGen):
         Q_rv = np.stack([basis['eC_rv'], basis['eL_rv'], basis['eT_rv']], axis=-1)
         
         # Septum basis
-        Qlv_sep = self.rotate_basis_rodriguez(
+        Qlv_sep = self.orient_rodrigues(
             Q_lv, angles['alfaS'], angles['beta_septum']
         )
-        Qrv_sep = self.rotate_basis_rodriguez(
+        Qrv_sep = self.orient_rodrigues(
             Q_rv, angles['alfaS'], angles['beta_septum']
         )
         
         # Wall basis
-        Qlv_wall = self.rotate_basis_rodriguez(
+        Qlv_wall = self.orient_rodrigues(
             Q_lv, angles['alpha_wall_lv'], angles['beta_wall_lv']
         )
-        Qrv_wall = self.rotate_basis_rodriguez(
+        Qrv_wall = self.orient_rodrigues(
             Q_rv, angles['alpha_wall_rv'], angles['beta_wall_rv']
         )
         
@@ -683,33 +723,26 @@ class FibGenDoste(FibGen):
         S = Q[:, :, 1]  # Sheet normal
         T = Q[:, :, 2]  # Sheet direction
         
-        for k, v in basis.items():
-            self.mesh.cell_data[k] = v
-        for k, v in angles.items():
-            self.mesh.cell_data[k] = v
-        for i in range(Q_lv.shape[2]):
-            self.mesh.cell_data[f'Q_lv_{i}'] = Q_lv[:, :, i]
-            self.mesh.cell_data[f'Q_rv_{i}'] = Q_rv[:, :, i]
-            self.mesh.cell_data[f'Qlv_sep_{i}'] = Qlv_sep[:, :, i]
-            self.mesh.cell_data[f'Qrv_sep_{i}'] = Qrv_sep[:, :, i]
-            self.mesh.cell_data[f'Qlv_wall_{i}'] = Qlv_wall[:, :, i]
-            self.mesh.cell_data[f'Qrv_wall_{i}'] = Qrv_wall[:, :, i]
-            self.mesh.cell_data[f'Qepi_{i}'] = Qepi[:, :, i]
-            self.mesh.cell_data[f'Qsep_{i}'] = Qsep[:, :, i]
-            self.mesh.cell_data[f'Q_{i}'] = Q[:, :, i]  
-
         self.mesh.cell_data['F'] = F
         self.mesh.cell_data['S'] = S
         self.mesh.cell_data['T'] = T
-        
-        # print("   Writing mesh to check.vtu")
-        # self.mesh.save('check.vtu')
         
         return F, S, T
 
 
     def get_angle_fields(self, params):
-        "Helper function to compute a global alpha and beta angle fields."
+        """Compute global alpha and beta angle fields.
+        
+        Helper function to compute spatially-varying helix and transverse angle fields
+        for the Doste method by interpolating between septum and wall values across
+        ventricles and transmural depth.
+        
+        Args:
+            params: Dictionary with angle parameters (in degrees or radians).
+            
+        Returns:
+            tuple: (alfa, beta) arrays of helix and transverse angles at each cell.
+        """
 
         # Interpolation factor between LV and RV
         angles = self._compute_angles(params)
