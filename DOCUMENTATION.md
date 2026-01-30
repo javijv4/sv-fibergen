@@ -221,11 +221,11 @@ The Bayer et al. (2012) method is designed for truncated biventricular geometrie
 
 The fiber generation algorithm requires specific boundary surfaces to be defined on the cardiac mesh:
 
-- **Epicardium (epi)**: The outer surface of the biventricle
-- **LV Endocardium (endo_lv)**: The inner surface of the left ventricle
-- **RV Endocardium (endo_rv)**: The inner surface of the right ventricle
+- **Epicardium**: The outer surface of the biventricle
+- **LV Endocardium**: The inner surface of the left ventricle
+- **RV Endocardium**: The inner surface of the right ventricle
 - **Base**: The basal (top) boundary of the geometry
-- **Apex (epi_apex)**: The epicardial apex region
+- **Apex**: The epicardial apex region
 
 The apex surface is automatically generated from the epicardium by identifying the point furthest from the base. Specifically, the apex point $\mathbf{p}_{\text{apex}}$ is found as:
 
@@ -332,15 +332,15 @@ The Doste et al. (2019) method extends the fiber generation to biventricular geo
 
 The fiber generation algorithm requires the following boundary surfaces:
 
-- **Epicardium (epi)**: The outer surface of the biventricle
-- **LV Endocardium (endo_lv)**: The inner surface of the left ventricle
-- **RV Endocardium (endo_rv)**: The inner surface of the right ventricle
-- **Mitral valve (mv)**: LV inflow boundary
-- **Aortic valve (av)**: LV outflow boundary
-- **Tricuspid valve (tv)**: RV inflow boundary
-- **Pulmonary valve (pv)**: RV outflow boundary
-- **Apex (epi_apex)**: The epicardial apex region
-- **Top (top)**: The top boundary (base region excluding valves)
+- **Epicardium**: The outer surface of the biventricle
+- **LV Endocardium**: The inner surface of the left ventricle
+- **RV Endocardium**: The inner surface of the right ventricle
+- **Mitral valve**: LV inflow boundary
+- **Aortic valve**: LV outflow boundary
+- **Tricuspid valve**: RV inflow boundary
+- **Pulmonary valve**: RV outflow boundary
+- **Apex**: The epicardial apex region
+- **Top**: Surface that includes all valves. Only needed if the Apex needs to be generated.
 
 The apex surface is automatically generated from the epicardium by identifying the point furthest from the base/top boundary. The apex point $\mathbf{p}_{\text{apex}}$ is found as:
 

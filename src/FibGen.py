@@ -333,6 +333,33 @@ class FibGen:
     def generate_fibers(self, params):
         """Generate fiber directions. Override in subclasses."""
         raise NotImplementedError("Subclasses must implement generate_fibers()")
+    
+    def write_fibers(self, outdir):
+        """Write fiber, sheet, and normal directions to VTU files.
+        
+        Saves three separate files with fiber directions stored in 'FIB_DIR' field:
+        - fiber.vtu: Fiber directions
+        - sheet.vtu: Sheet normal directions
+        - normal.vtu: Sheet-normal directions
+        
+        Args:
+            outdir: Output directory path where files will be saved.
+        """
+        # Create a copy of the mesh without any data
+        mesh_out = self.mesh.copy(deep=True)
+        mesh_out.clear_data()
+
+        # Fiber direction
+        mesh_out.cell_data['FIB_DIR'] = self.mesh.cell_data['fiber']
+        mesh_out.save(os.path.join(outdir, "fiber.vtu"))
+
+        # Sheet direction
+        mesh_out.cell_data['FIB_DIR'] = self.mesh.cell_data['sheet']
+        mesh_out.save(os.path.join(outdir, "sheet.vtu"))
+
+        # Normal direction
+        mesh_out.cell_data['FIB_DIR'] = self.mesh.cell_data['sheet-normal']
+        mesh_out.save(os.path.join(outdir, "normal.vtu"))
 
 
 class FibGenBayer(FibGen):
@@ -477,35 +504,6 @@ class FibGenBayer(FibGen):
         beta = betaS * (1 - self.lap['Trans_EPI']) + betaW * self.lap['Trans_EPI']
 
         return alfa, beta
-        
-
-
-    def write_fibers(self, outdir):
-        """Write fiber, sheet, and normal directions to VTU files.
-        
-        Saves three separate files with fiber directions stored in 'FIB_DIR' field:
-        - fiber.vtu: Fiber directions
-        - sheet.vtu: Sheet normal directions
-        - normal.vtu: Sheet-normal directions
-        
-        Args:
-            outdir: Output directory path where files will be saved.
-        """
-        # Create a copy of the mesh without any data
-        mesh_out = self.mesh.copy(deep=True)
-        mesh_out.clear_data()
-
-        # Fiber direction
-        mesh_out.cell_data['FIB_DIR'] = self.mesh.cell_data['fiber']
-        mesh_out.save(os.path.join(outdir, "fiber.vtu"))
-
-        # Sheet direction
-        mesh_out.cell_data['FIB_DIR'] = self.mesh.cell_data['sheet']
-        mesh_out.save(os.path.join(outdir, "sheet.vtu"))
-
-        # Normal direction
-        mesh_out.cell_data['FIB_DIR'] = self.mesh.cell_data['sheet-normal']
-        mesh_out.save(os.path.join(outdir, "normal.vtu"))
 
 
 class FibGenDoste(FibGen):
@@ -723,9 +721,9 @@ class FibGenDoste(FibGen):
         S = Q[:, :, 1]  # Sheet normal
         T = Q[:, :, 2]  # Sheet direction
         
-        self.mesh.cell_data['F'] = F
-        self.mesh.cell_data['S'] = S
-        self.mesh.cell_data['T'] = T
+        self.mesh.cell_data['fiber'] = F
+        self.mesh.cell_data['sheet-normal'] = S
+        self.mesh.cell_data['sheet'] = T
         
         return F, S, T
 

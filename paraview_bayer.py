@@ -286,6 +286,9 @@ for fiber_family in fiber_families:
     
     # show color bar/color legend
     streamTracer_currentDisplay.SetScalarBarVisibility(renderView1, True)
+
+
+    ColorBy(slice1Display, None)
     
     # create a new 'Glyph'
     glyph1 = Glyph(registrationName='Glyph1', Input=slice1,

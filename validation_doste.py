@@ -68,7 +68,7 @@ def calculate_alpha_beta_angles(f, eC, eL, eT):
 
 if __name__ == "__main__":
 
-    outdir = "example/ot/output_d_oo"
+    outdir = "example/ot/output_doste"
     save_vtu = True
 
     params_zero = {
@@ -218,8 +218,8 @@ if __name__ == "__main__":
     
     axes[0].plot([-90, 90], [-90, 90], 'k--', lw=1, alpha=0.5)
     axes[0].set_title(r'$\alpha=\pm 60, \beta=0$')
-    axes[0].set_xlabel('Reference (degrees)')
-    axes[0].set_ylabel('Calculated (degrees)')
+    axes[0].set_xlabel('Scalar Interpolation (degrees)')
+    axes[0].set_ylabel('Fiber angles (degrees)')
     axes[0].legend(fontsize=8, loc='upper left')
 
     # Beta Only
@@ -231,8 +231,8 @@ if __name__ == "__main__":
     
     axes[1].plot([-90, 90], [-90, 90], 'k--', lw=1, alpha=0.5)
     axes[1].set_title(r'$\alpha=0, \beta=\pm 20$')
-    axes[1].set_xlabel('Reference (degrees)')
-    axes[1].set_ylabel('Calculated (degrees)')
+    axes[1].set_xlabel('Scalar Interpolation (degrees)')
+    axes[1].set_ylabel('Fiber angles (degrees)')
     axes[1].legend(fontsize=8, loc='upper left')
 
     # Combined
@@ -246,8 +246,8 @@ if __name__ == "__main__":
     axes[2].plot(x_line, slope_b * x_line + intercept_b, 'r-', lw=1, label=f'β: R²={r_value_b**2:.3f}, m={slope_b:.3f}')
     axes[2].plot([-90, 90], [-90, 90], 'k--', lw=1, alpha=0.5)
     axes[2].set_title(r'$\alpha=\pm 60, \beta=\pm 20$')
-    axes[2].set_xlabel('Reference (degrees)')
-    axes[2].set_ylabel('Calculated (degrees)')
+    axes[2].set_xlabel('Scalar Interpolation (degrees)')
+    axes[2].set_ylabel('Fiber angles (degrees)')
     axes[2].legend(fontsize=8, loc='upper left')
 
     plt.savefig('example/ot/doste_angle_correlations.png', dpi=150)

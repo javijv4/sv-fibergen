@@ -18,6 +18,7 @@ import pyvista as pv
 from src.LaplaceSolver import LaplaceSolver
 from src.FibGen import FibGenDoste
 from src.SurfaceNames import SurfaceName
+from src.SurfaceUtils import generate_epi_apex
 from time import time
 
 
@@ -30,19 +31,9 @@ if __name__ == "__main__":
     svfsi_exec = "svmultiphysics "
 
     mesh_path = "example/ot/mesh-complete.mesh.vtu"
-    surfaces_dir = None  # default computed from mesh_path below
-    outdir = "example/ot/output_d_oo"
+    outdir = "example/ot/output_doste"
+    surfaces_dir = 'example/ot/mesh-surfaces'
 
-    surface_paths = {
-        SurfaceName.EPICARDIUM: 'example/ot/mesh-surfaces/epi.vtp',
-        SurfaceName.EPICARDIUM_APEX: 'example/ot/mesh-surfaces/epi_apex.vtp',
-        SurfaceName.AORTIC_VALVE: 'example/ot/mesh-surfaces/av.vtp',
-        SurfaceName.MITRAL_VALVE: 'example/ot/mesh-surfaces/mv.vtp',
-        SurfaceName.TRICUSPID_VALVE: 'example/ot/mesh-surfaces/tv.vtp',
-        SurfaceName.PULMONARY_VALVE: 'example/ot/mesh-surfaces/pv.vtp',
-        SurfaceName.ENDOCARDIUM_LV: 'example/ot/mesh-surfaces/endo_lv.vtp',
-        SurfaceName.ENDOCARDIUM_RV: 'example/ot/mesh-surfaces/endo_rv.vtp'
-    }
 
     # Parameters from the Doste paper https://doi.org/10.1002/cnm.3185
     params = {
@@ -71,9 +62,14 @@ if __name__ == "__main__":
     ###########################################################
 
     # Optional CLI overrides
-    parser = argparse.ArgumentParser(description="Generate fibers using the Doste method (OO implementation).")
+    parser = argparse.ArgumentParser(description="Generate fibers using the Bayer method.")
     parser.add_argument("--svfsi-exec", default=svfsi_exec, help="svMultiPhysics executable/command (default: %(default)s)")
     parser.add_argument("--mesh-path", default=mesh_path, help="Path to the volumetric mesh .vtu (default: %(default)s)")
+    parser.add_argument(
+        "--surfaces-dir",
+        default=surfaces_dir,
+        help="Directory containing mesh surfaces; default: <parent of mesh_path>/mesh-surfaces",
+    )
     parser.add_argument("--outdir", default=outdir, help="Output directory (default: %(default)s)")
     args = parser.parse_args()
 
@@ -84,14 +80,37 @@ if __name__ == "__main__":
     mesh_path = args.mesh_path
     outdir = args.outdir
 
+    if args.surfaces_dir is None:
+        surfaces_dir = os.path.join(os.path.dirname(mesh_path), "mesh-surfaces")
+    else:
+        surfaces_dir = os.path.abspath(args.surfaces_dir)
+
     # Make sure the paths are full paths
     mesh_path = os.path.abspath(mesh_path)
     outdir = os.path.abspath(outdir)
+    surfaces_dir = os.path.abspath(surfaces_dir)
 
-    start = time()
+    # Define surface paths
+    surface_paths = {
+        SurfaceName.EPICARDIUM: f'{surfaces_dir}/epi.vtp',
+        SurfaceName.EPICARDIUM_APEX: f'{surfaces_dir}/epi_apex.vtp',
+        SurfaceName.AORTIC_VALVE: f'{surfaces_dir}/av.vtp',
+        SurfaceName.MITRAL_VALVE: f'{surfaces_dir}/mv.vtp',
+        SurfaceName.TRICUSPID_VALVE: f'{surfaces_dir}/tv.vtp',
+        SurfaceName.PULMONARY_VALVE: f'{surfaces_dir}/pv.vtp',
+        SurfaceName.ENDOCARDIUM_LV: f'{surfaces_dir}/endo_lv.vtp',
+        SurfaceName.ENDOCARDIUM_RV: f'{surfaces_dir}/endo_rv.vtp',
+        SurfaceName.BASE: f'{surfaces_dir}/top.vtp'
+    }
 
     # Create output directory if needed
     os.makedirs(outdir, exist_ok=True)
+
+    # Check if the EPICARDIUM_APEX surface exists; if not create it
+    start = time()
+    if not os.path.exists(surface_paths[SurfaceName.EPICARDIUM_APEX]):
+        print("Generating EPICARDIUM_APEX surface...")
+        generate_epi_apex(surface_paths)
 
     # Initialize Laplace solver
     solver = LaplaceSolver(mesh_path, surface_paths, svfsi_exec)
@@ -112,13 +131,10 @@ if __name__ == "__main__":
 
     # Generate fiber directions
     F, S, T = fib_gen.generate_fibers(params)
-
-    # Add fiber fields to the mesh
-    fib_gen.mesh.cell_data['fibersLong'] = F
-    fib_gen.mesh.cell_data['fibersSheet'] = S
-    fib_gen.mesh.cell_data['fibersNormal'] = T
-
     print(f"generate fibers (Doste method) elapsed time: {time() - start:.3f} s")
+
+    # Write fibers to output directory
+    fib_gen.write_fibers(outdir)
 
     # Save the result mesh
     result_mesh_path = os.path.join(outdir, "results_doste.vtu")

@@ -12,6 +12,7 @@ The script supports command-line arguments for customization of mesh paths,
 output directories, and solver executables.
 """
 
+import argparse
 import os
 import pyvista as pv
 from src.LaplaceSolver import LaplaceSolver
@@ -31,14 +32,9 @@ if __name__ == "__main__":
     svfsi_exec = "svmultiphysics "
 
     mesh_path = "example/truncated/VOLUME.vtu"
-    outdir = "example/truncated/output_b_oo"
-
-    surface_paths = {SurfaceName.EPICARDIUM: 'example/truncated/mesh-surfaces/EPI.vtp',
-                    SurfaceName.EPICARDIUM_APEX: 'example/truncated/mesh-surfaces/EPI_APEX.vtp',
-                    SurfaceName.BASE: 'example/truncated/mesh-surfaces/BASE.vtp',
-                    SurfaceName.ENDOCARDIUM_LV: 'example/truncated/mesh-surfaces/LV.vtp',
-                    SurfaceName.ENDOCARDIUM_RV: 'example/truncated/mesh-surfaces/RV.vtp'}
-
+    outdir = "example/truncated/output_bayer"
+    surfaces_dir = 'example/truncated/mesh-surfaces'
+                    
     # Parameters for the Bayer et al. method https://doi.org/10.1007/s10439-012-0593-5. 
     params = {
         "ALFA_END": 60.0,
@@ -52,17 +48,49 @@ if __name__ == "__main__":
     ############  FIBER GENERATION  ###########################
     ###########################################################
 
+    # Optional CLI overrides
+    parser = argparse.ArgumentParser(description="Generate fibers using the Bayer method.")
+    parser.add_argument("--svfsi-exec", default=svfsi_exec, help="svMultiPhysics executable/command (default: %(default)s)")
+    parser.add_argument("--mesh-path", default=mesh_path, help="Path to the volumetric mesh .vtu (default: %(default)s)")
+    parser.add_argument(
+        "--surfaces-dir",
+        default=surfaces_dir,
+        help="Directory containing mesh surfaces; default: <parent of mesh_path>/mesh-surfaces",
+    )
+    parser.add_argument("--outdir", default=outdir, help="Output directory (default: %(default)s)")
+    args = parser.parse_args()
+
+    svfsi_exec = args.svfsi_exec
+    if not svfsi_exec.endswith(" "):
+        svfsi_exec = svfsi_exec + " "
+
+    mesh_path = args.mesh_path
+    outdir = args.outdir
+
+    if args.surfaces_dir is None:
+        surfaces_dir = os.path.join(os.path.dirname(mesh_path), "mesh-surfaces")
+    else:
+        surfaces_dir = os.path.abspath(args.surfaces_dir)
+
     # Make sure the paths are full paths
     mesh_path = os.path.abspath(mesh_path)
     outdir = os.path.abspath(outdir)
+    surfaces_dir = os.path.abspath(surfaces_dir)
 
-    start = time()
-
+    # Define surface paths
+    surface_paths = {SurfaceName.EPICARDIUM: f'{surfaces_dir}/EPI.vtp',
+                    SurfaceName.EPICARDIUM_APEX: f'{surfaces_dir}/EPI_APEX.vtp',
+                    SurfaceName.BASE: f'{surfaces_dir}/BASE.vtp',
+                    SurfaceName.ENDOCARDIUM_LV: f'{surfaces_dir}/LV.vtp',
+                    SurfaceName.ENDOCARDIUM_RV: f'{surfaces_dir}/RV.vtp'}
+    
     # Create output directory if needed
     os.makedirs(outdir, exist_ok=True)
     
     # Check if the EPICARDIUM_APEX surface exists; if not create it
+    start = time()
     if not os.path.exists(surface_paths[SurfaceName.EPICARDIUM_APEX]):
+        print("Generating EPICARDIUM_APEX surface...")
         generate_epi_apex(surface_paths)
         
     # Initialize Laplace solver

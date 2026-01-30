@@ -6,6 +6,18 @@ The `examples` folder contains two geometries: a truncated biventricle (`example
 
 Validation scripts (`validation_bayer.py` and `validation_doste.py`) can be run to generate the correlation plots shown below. ParaView Python scripts (`paraview_bayer.py` and `paraview_doste.py`) can be used to generate the different visualization views (fiber, sheet, sheet-normal orientations) for each case.
 
+The validation codes first calculate the $\alpha$ and $\beta$ angles using scalar interpolations. Then, the $\alpha$ and $\beta$ angles are calculated from the fiber direction $\mathbf f$ and the orthogonal basis $(\mathbf e_c, \mathbf e_\ell, \mathbf e_t)$. 
+
+We do this for three combinations of parameters:
+1. Setting all $\alpha$ to default values, and all $\beta$ to 0.
+2. Setting all $\alpha$ to 0, and all $\beta$ to default values.
+3. Setting all $\alpha$ and $\beta$ to default values.
+
+This allows to isolate and identify issues in the $\alpha$ and $\beta$ rotations. 
+
+Ideally both scalar interpolated and fiber derived angles should match exactly, but given that the orthogonal basis $(\mathbf e_c, \mathbf e_\ell, \mathbf e_t)$ also needs to be interpolated some differences arise. 
+
+
 Notes:
 - To run the `validation*.py` scripts the file with the Laplace results must be created. This can be done using the `main*.py` scripts.
 - To run the `paraview*.py` you must run the `validation*.py` codes first. 
@@ -51,9 +63,11 @@ The Bayer method results are demonstrated on a truncated biventricular geometry.
 
 ### Angle Correlations
 
+To check the code, we first calculate the $\alpha$ and $\beta$ angles using scalar interpolations. Then, we calculate the $\alpha$ and $\beta$ angles using the fiber direction $\mathbf f$ and the orthogonal basis $\mathbf e_c$, $\mathbf e_\ell$, $\mathbf e_t$. 
+
 ![Bayer Angle Correlations](example/truncated/bayer_angle_correlations.png)
 
-*Figure 7: Correlation plots comparing computed angles with reference values for the Bayer method. Red and blue dots show the $\alpha$ and $\beta$ angles*
+*Figure 7: Correlation plots comparing scalar interpolation angles with fiber derived angles for the Bayer method. Blue and red dots show the $\alpha$ and $\beta$ angles. For reference, the original Bayer method with no modifications is shown.*
 
 ---
 
@@ -95,6 +109,6 @@ The Doste method results are demonstrated on a complete biventricular geometry w
 
 ![Doste Angle Correlations](example/ot/doste_angle_correlations.png)
 
-*Figure 14: Correlation plots comparing computed angles with reference values for the Doste method. Red and blue dots show the $\alpha$ and $\beta$ angles**
+*Figure 14: Correlation plots comparing scalar interpolation angles with fiber derived angles for the Doste method. Blue and red dots show the $\alpha$ and $\beta$ angles**
 
 ---

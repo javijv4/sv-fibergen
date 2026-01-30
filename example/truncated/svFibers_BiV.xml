@@ -10,7 +10,7 @@
 		<Save_results_to_VTK_format> 1 </Save_results_to_VTK_format>
 		<Name_prefix_of_saved_VTK_files> result </Name_prefix_of_saved_VTK_files>
 		<Increment_in_saving_VTK_files> 1 </Increment_in_saving_VTK_files>
-		<Save_results_in_folder> /Users/jjv/Library/CloudStorage/OneDrive-Stanford/Research/sv-fibergen/example/truncated/output_b_oo </Save_results_in_folder>
+		<Save_results_in_folder> /home/javiera/Research/sv-fibergen/example/truncated/output_bayer </Save_results_in_folder>
 		<Start_saving_after_time_step> 1 </Start_saving_after_time_step>
 		<Increment_in_saving_restart_files> 1 </Increment_in_saving_restart_files>
 		<Convert_BIN_to_VTK_format> 0 </Convert_BIN_to_VTK_format>
@@ -19,21 +19,21 @@
 		<Debug> 0 </Debug>
 	</GeneralSimulationParameters>
 	<Add_mesh name="msh">
-		<Mesh_file_path> /Users/jjv/Library/CloudStorage/OneDrive-Stanford/Research/sv-fibergen/example/truncated/VOLUME.vtu </Mesh_file_path>
+		<Mesh_file_path> /home/javiera/Research/sv-fibergen/example/truncated/VOLUME.vtu </Mesh_file_path>
 		<Add_face name="epi">
-			<Face_file_path> example/truncated/mesh-surfaces/EPI.vtp </Face_file_path>
+			<Face_file_path> /home/javiera/Research/sv-fibergen/example/truncated/mesh-surfaces/EPI.vtp </Face_file_path>
 		</Add_face>
 		<Add_face name="epi_top">
-			<Face_file_path> example/truncated/mesh-surfaces/BASE.vtp </Face_file_path>
+			<Face_file_path> /home/javiera/Research/sv-fibergen/example/truncated/mesh-surfaces/BASE.vtp </Face_file_path>
 		</Add_face>
 		<Add_face name="epi_apex">
-			<Face_file_path> example/truncated/mesh-surfaces/EPI_APEX.vtp </Face_file_path>
+			<Face_file_path> /home/javiera/Research/sv-fibergen/example/truncated/mesh-surfaces/EPI_APEX.vtp </Face_file_path>
 		</Add_face>
 		<Add_face name="endo_lv">
-			<Face_file_path> example/truncated/mesh-surfaces/LV.vtp </Face_file_path>
+			<Face_file_path> /home/javiera/Research/sv-fibergen/example/truncated/mesh-surfaces/LV.vtp </Face_file_path>
 		</Add_face>
 		<Add_face name="endo_rv">
-			<Face_file_path> example/truncated/mesh-surfaces/RV.vtp </Face_file_path>
+			<Face_file_path> /home/javiera/Research/sv-fibergen/example/truncated/mesh-surfaces/RV.vtp </Face_file_path>
 		</Add_face>
 	</Add_mesh>
 	<Add_equation type="heatS">
