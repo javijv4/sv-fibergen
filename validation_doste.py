@@ -177,28 +177,24 @@ if __name__ == "__main__":
     x_line = np.array([-90, 90])
     axes[0].plot(x_line, slope_a * x_line + intercept_a, 'b-', lw=1, label=f'α: R²={r_value_a**2:.3f}, m={slope_a:.3f}')
     
-    slope_b, intercept_b, r_value_b, _, _ = stats.linregress(ref_beta_only_a, beta_only_a)
-    axes[0].plot(x_line, slope_b * x_line + intercept_b, 'r-', lw=1, label=f'β: R²={r_value_b**2:.3f}, m={slope_b:.3f}')
     axes[0].plot([-90, 90], [-90, 90], 'k--', lw=1, alpha=0.5)
     axes[0].set_title(r'$\alpha=\pm 60, \beta=0$')
     axes[0].set_xlabel('Reference (degrees)')
     axes[0].set_ylabel('Calculated (degrees)')
-    axes[0].legend(fontsize=8)
+    axes[0].legend(fontsize=8, loc='upper left')
 
     # Beta Only
     axes[1].scatter(ref_alpha_only_b, alpha_only_b, alpha=0.02, s=10, color='blue')
     axes[1].scatter(ref_beta_only_b, beta_only_b, alpha=0.02, s=10, color='red')
     
-    slope_a, intercept_a, r_value_a, _, _ = stats.linregress(ref_alpha_only_b, alpha_only_b)
-    axes[1].plot(x_line, slope_a * x_line + intercept_a, 'b-', lw=1, label=f'α: R²={r_value_a**2:.3f}, m={slope_a:.3f}')
-    
     slope_b, intercept_b, r_value_b, _, _ = stats.linregress(ref_beta_only_b, beta_only_b)
     axes[1].plot(x_line, slope_b * x_line + intercept_b, 'r-', lw=1, label=f'β: R²={r_value_b**2:.3f}, m={slope_b:.3f}')
+    
     axes[1].plot([-90, 90], [-90, 90], 'k--', lw=1, alpha=0.5)
     axes[1].set_title(r'$\alpha=0, \beta=\pm 20$')
     axes[1].set_xlabel('Reference (degrees)')
     axes[1].set_ylabel('Calculated (degrees)')
-    axes[1].legend(fontsize=8)
+    axes[1].legend(fontsize=8, loc='upper left')
 
     # Combined
     axes[2].scatter(ref_alpha_combined, alpha_combined, alpha=0.02, s=10, color='blue')
@@ -213,9 +209,9 @@ if __name__ == "__main__":
     axes[2].set_title(r'$\alpha=\pm 60, \beta=\pm 20$')
     axes[2].set_xlabel('Reference (degrees)')
     axes[2].set_ylabel('Calculated (degrees)')
-    axes[2].legend(fontsize=8)
+    axes[2].legend(fontsize=8, loc='upper left')
 
-    plt.savefig('doste_angle_correlations.png', dpi=150)
+    plt.savefig('example/ot/doste_angle_correlations.png', dpi=150)
 
     # Save VTU file with all angle values
     if save_vtu:
@@ -229,4 +225,4 @@ if __name__ == "__main__":
         mesh['beta_only_b'] = beta_only_b
         mesh['alpha_ref'] = ref_alpha_combined
         mesh['beta_ref'] = ref_beta_combined
-        mesh.save('validation_doste.vtu')
+        mesh.save('example/ot/validation_doste.vtu')

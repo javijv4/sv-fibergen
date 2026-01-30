@@ -17,6 +17,7 @@ import pyvista as pv
 from src.LaplaceSolver import LaplaceSolver
 from src.FibGen import FibGenBayer
 from src.SurfaceNames import SurfaceName
+from src.SurfaceUtils import generate_epi_apex
 from time import time
 
 
@@ -59,7 +60,11 @@ if __name__ == "__main__":
 
     # Create output directory if needed
     os.makedirs(outdir, exist_ok=True)
-
+    
+    # Check if the EPICARDIUM_APEX surface exists; if not create it
+    if not os.path.exists(surface_paths[SurfaceName.EPICARDIUM_APEX]):
+        generate_epi_apex(surface_paths)
+        
     # Initialize Laplace solver
     solver = LaplaceSolver(mesh_path, surface_paths, svfsi_exec)
 
@@ -79,9 +84,10 @@ if __name__ == "__main__":
 
     # Generate fiber directions
     F, S, T = fib_gen.generate_fibers(params)
-    fib_gen.write_fibers(outdir)
-
     print(f"generate fibers (Bayer method) elapsed time: {time() - start:.3f} s")
+    
+    # Write fibers to output directory
+    fib_gen.write_fibers(outdir)
 
     # Save the result mesh
     result_mesh_path = os.path.join(outdir, "results_bayer.vtu")

@@ -6,6 +6,7 @@ import numpy as np
 import pyvista as pv
 
 from src.FibGen import FibGenBayer
+from scipy import stats
 import matplotlib.pyplot as plt
 
 
@@ -144,41 +145,64 @@ if __name__ == "__main__":
     fig, axes = plt.subplots(2, 2, figsize=(8, 7), constrained_layout=True)
     fig.suptitle(r'$\alpha$ and $\beta$ angle correlations', fontsize=16)
 
+    # Define x_line for regression plotting
+    x_line = np.array([-90, 90])
+
     # Alpha Only
-    axes[0, 0].scatter(ref_alpha_only_a, alpha_only_a, alpha=0.02, s=10, label=r'$\alpha$', color='blue')
-    axes[0, 0].scatter(ref_beta_only_a, beta_only_a, alpha=0.02, s=10, label=r'$\beta$', color='red')
-    axes[0, 0].plot([-90, 90], [-90, 90], 'k--', lw=1)
+    axes[0, 0].scatter(ref_alpha_only_a, alpha_only_a, alpha=0.02, s=10, color='blue')
+    axes[0, 0].scatter(ref_beta_only_a, beta_only_a, alpha=0.02, s=10, color='red')
+    
+    slope_a, intercept_a, r_value_a, _, _ = stats.linregress(ref_alpha_only_a, alpha_only_a)
+    axes[0, 0].plot(x_line, slope_a * x_line + intercept_a, 'b-', lw=1, label=f'α: R²={r_value_a**2:.3f}, m={slope_a:.3f}')
+    
+    axes[0, 0].plot([-90, 90], [-90, 90], 'k--', lw=1, alpha=0.5)
     axes[0, 0].set_title(r'$\alpha=\pm 60, \beta=0$')
     axes[0, 0].set_xlabel('Reference (degrees)')
     axes[0, 0].set_ylabel('Calculated (degrees)')
-    axes[0, 0].legend(loc='upper left')
+    axes[0, 0].legend(fontsize=8, loc='upper left')
 
     # Beta Only
-    axes[0, 1].scatter(ref_alpha_only_b, alpha_only_b, alpha=0.02, s=10, label=r'$\alpha$', color='blue')
-    axes[0, 1].scatter(ref_beta_only_b, beta_only_b, alpha=0.02, s=10, label=r'$\beta$', color='red')
-    axes[0, 1].plot([-90, 90], [-90, 90], 'k--', lw=1)
+    axes[0, 1].scatter(ref_alpha_only_b, alpha_only_b, alpha=0.02, s=10, color='blue')
+    axes[0, 1].scatter(ref_beta_only_b, beta_only_b, alpha=0.02, s=10, color='red')
+    
+    slope_b, intercept_b, r_value_b, _, _ = stats.linregress(ref_beta_only_b, beta_only_b)
+    axes[0, 1].plot(x_line, slope_b * x_line + intercept_b, 'r-', lw=1, label=f'β: R²={r_value_b**2:.3f}, m={slope_b:.3f}')
+    
+    axes[0, 1].plot([-90, 90], [-90, 90], 'k--', lw=1, alpha=0.5)
     axes[0, 1].set_title(r'$\alpha=0, \beta=\pm 20$')
     axes[0, 1].set_xlabel('Reference (degrees)')
     axes[0, 1].set_ylabel('Calculated (degrees)')
-    axes[0, 1].legend(loc='upper left')
+    axes[0, 1].legend(fontsize=8, loc='upper left')
 
     # Combined
-    axes[1, 0].scatter(ref_alpha_combined, alpha_combined, alpha=0.02, s=10, label=r'$\alpha$', color='blue')
-    axes[1, 0].scatter(ref_beta_combined, beta_combined, alpha=0.02, s=10, label=r'$\beta$', color='red')
-    axes[1, 0].plot([-90, 90], [-90, 90], 'k--', lw=1)
+    axes[1, 0].scatter(ref_alpha_combined, alpha_combined, alpha=0.02, s=10, color='blue')
+    axes[1, 0].scatter(ref_beta_combined, beta_combined, alpha=0.02, s=10, color='red')
+    
+    slope_a, intercept_a, r_value_a, _, _ = stats.linregress(ref_alpha_combined, alpha_combined)
+    axes[1, 0].plot(x_line, slope_a * x_line + intercept_a, 'b-', lw=1, label=f'α: R²={r_value_a**2:.3f}, m={slope_a:.3f}')
+    
+    slope_b, intercept_b, r_value_b, _, _ = stats.linregress(ref_beta_combined, beta_combined)
+    axes[1, 0].plot(x_line, slope_b * x_line + intercept_b, 'r-', lw=1, label=f'β: R²={r_value_b**2:.3f}, m={slope_b:.3f}')
+    axes[1, 0].plot([-90, 90], [-90, 90], 'k--', lw=1, alpha=0.5)
     axes[1, 0].set_title(r'$\alpha=\pm 60, \beta=\pm 20$')
     axes[1, 0].set_xlabel('Reference (degrees)')
     axes[1, 0].set_ylabel('Calculated (degrees)')
-    axes[1, 0].legend(loc='upper left')
+    axes[1, 0].legend(fontsize=8, loc='upper left')
 
     # Original Bayer
-    axes[1, 1].scatter(ref_alpha_combined, alpha_og, alpha=0.02, s=10, label=r'$\alpha$', color='blue')
-    axes[1, 1].scatter(ref_beta_combined, beta_og, alpha=0.02, s=10, label=r'$\beta$', color='red')
-    axes[1, 1].plot([-90, 90], [-90, 90], 'k--', lw=1)
+    axes[1, 1].scatter(ref_alpha_combined, alpha_og, alpha=0.02, s=10, color='blue')
+    axes[1, 1].scatter(ref_beta_combined, beta_og, alpha=0.02, s=10, color='red')
+    
+    slope_a, intercept_a, r_value_a, _, _ = stats.linregress(ref_alpha_combined, alpha_og)
+    axes[1, 1].plot(x_line, slope_a * x_line + intercept_a, 'b-', lw=1, label=f'α: R²={r_value_a**2:.3f}, m={slope_a:.3f}')
+    
+    slope_b, intercept_b, r_value_b, _, _ = stats.linregress(ref_beta_combined, beta_og)
+    axes[1, 1].plot(x_line, slope_b * x_line + intercept_b, 'r-', lw=1, label=f'β: R²={r_value_b**2:.3f}, m={slope_b:.3f}')
+    axes[1, 1].plot([-90, 90], [-90, 90], 'k--', lw=1, alpha=0.5)
     axes[1, 1].set_title(r'$\alpha=\pm 60, \beta=\pm 20$ - Original Bayer')
     axes[1, 1].set_xlabel('Reference (degrees)')
     axes[1, 1].set_ylabel('Calculated (degrees)')
-    axes[1, 1].legend(loc='upper left')
+    axes[1, 1].legend(fontsize=8, loc='upper left')
 
     plt.savefig('bayer_angle_correlations.png', dpi=150)
 
@@ -196,4 +220,4 @@ if __name__ == "__main__":
         mesh['beta_only_b'] = beta_only_b
         mesh['alpha_ref'] = ref_alpha_combined
         mesh['beta_ref'] = ref_beta_combined
-        mesh.save('validation_bayer.vtu')
+        mesh.save('example/bayer/validation_bayer.vtu')
