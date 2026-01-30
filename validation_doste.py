@@ -150,20 +150,59 @@ if __name__ == "__main__":
     eC, eL, eT = fib_gen.generate_fibers(params_zero)
 
     # Sanity check 1: Only alpha rotation
-    f_alpha, s_alpha, n_alpha = fib_gen.generate_fibers(params_alpha)
+    f_alpha, n_alpha, s_alpha = fib_gen.generate_fibers(params_alpha)
     ref_alpha_only_a, ref_beta_only_a = fib_gen.get_angle_fields(params_alpha)
     alpha_only_a, beta_only_a, f_projected = calculate_alpha_beta_angles(f_alpha, eC, eL, eT)
 
+    if save_vtu:
+        fib_gen.mesh.cell_data.clear()
+        fib_gen.mesh.cell_data['f'] = f_alpha
+        fib_gen.mesh.cell_data['s'] = s_alpha
+        fib_gen.mesh.cell_data['n'] = n_alpha
+        fib_gen.mesh.cell_data['alpha_only_a'] = alpha_only_a
+        fib_gen.mesh.cell_data['beta_only_a'] = beta_only_a
+        fib_gen.mesh.cell_data['alpha_ref_a'] = ref_alpha_only_a
+        fib_gen.mesh.cell_data['beta_ref_a'] = ref_beta_only_a
+        fib_gen.mesh.cell_data['diff_alpha_a'] = alpha_only_a - ref_alpha_only_a
+        fib_gen.mesh.cell_data['diff_beta_a'] = beta_only_a - ref_beta_only_a
+        fib_gen.mesh.save('example/ot/validation_doste_onlyalpha.vtu')
+
     # Sanity check 2: Only beta rotation
-    f_beta, s_beta, n_beta = fib_gen.generate_fibers(params_beta)
+    f_beta, n_beta, s_beta = fib_gen.generate_fibers(params_beta)
     ref_alpha_only_b, ref_beta_only_b = fib_gen.get_angle_fields(params_beta)
     alpha_only_b, beta_only_b, f_projected = calculate_alpha_beta_angles(f_beta, eC, eL, eT)
+
+    if save_vtu:
+        fib_gen.mesh.cell_data.clear()
+        fib_gen.mesh.cell_data['f'] = f_beta
+        fib_gen.mesh.cell_data['s'] = s_beta
+        fib_gen.mesh.cell_data['n'] = n_beta
+        fib_gen.mesh.cell_data['alpha_only_b'] = alpha_only_b
+        fib_gen.mesh.cell_data['beta_only_b'] = beta_only_b
+        fib_gen.mesh.cell_data['alpha_ref_b'] = ref_alpha_only_b
+        fib_gen.mesh.cell_data['beta_ref_b'] = ref_beta_only_b
+        fib_gen.mesh.cell_data['diff_alpha_b'] = alpha_only_b - ref_alpha_only_b
+        fib_gen.mesh.cell_data['diff_beta_b'] = beta_only_b - ref_beta_only_b
+        fib_gen.mesh.save('example/ot/validation_doste_onlybeta.vtu')
     
     # Alpha and beta rotation combined
     eC, eL, eT = fib_gen.generate_fibers(params_zero)
-    f_combined, s_combined, n_combined = fib_gen.generate_fibers(params)
+    f_combined, n_combined, s_combined = fib_gen.generate_fibers(params)
     ref_alpha_combined, ref_beta_combined = fib_gen.get_angle_fields(params)
     alpha_combined, beta_combined, f_projected = calculate_alpha_beta_angles(f_combined, eC, eL, eT)
+
+    if save_vtu:
+        fib_gen.mesh.cell_data.clear()
+        fib_gen.mesh.cell_data['f'] = f_combined
+        fib_gen.mesh.cell_data['s'] = s_combined
+        fib_gen.mesh.cell_data['n'] = n_combined
+        fib_gen.mesh.cell_data['alpha_combined'] = alpha_combined
+        fib_gen.mesh.cell_data['beta_combined'] = beta_combined
+        fib_gen.mesh.cell_data['alpha_ref'] = ref_alpha_combined
+        fib_gen.mesh.cell_data['beta_ref'] = ref_beta_combined
+        fib_gen.mesh.cell_data['diff_alpha'] = alpha_combined - ref_alpha_combined
+        fib_gen.mesh.cell_data['diff_beta'] = beta_combined - ref_beta_combined
+        fib_gen.mesh.save('example/ot/validation_doste_combined.vtu')
         
     # Create figure with correlation plots
     fig, axes = plt.subplots(1, 3, figsize=(8, 3.5), constrained_layout=True)
@@ -212,17 +251,3 @@ if __name__ == "__main__":
     axes[2].legend(fontsize=8, loc='upper left')
 
     plt.savefig('example/ot/doste_angle_correlations.png', dpi=150)
-
-    # Save VTU file with all angle values
-    if save_vtu:
-        mesh = fib_gen.mesh.copy(deep=True)
-        mesh.clear_cell_data()
-        mesh['alpha_combined'] = alpha_combined
-        mesh['beta_combined'] = beta_combined
-        mesh['alpha_only_a'] = alpha_only_a
-        mesh['beta_only_a'] = beta_only_a
-        mesh['alpha_only_b'] = alpha_only_b
-        mesh['beta_only_b'] = beta_only_b
-        mesh['alpha_ref'] = ref_alpha_combined
-        mesh['beta_ref'] = ref_beta_combined
-        mesh.save('example/ot/validation_doste.vtu')

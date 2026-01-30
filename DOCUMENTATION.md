@@ -308,14 +308,20 @@ Note: the **bislerp** function performs a SLERP as the **interpolate_basis** fun
 ### Modified algorithm steps
 When running the original implementation, we observed the resulting fibers showed discontinuities that arise due to the **bislerp** function. To solve these issues, we modify the algorithm as follows:
 
-   - After step 3, for elements where $d > 0.5$, flip the first and third basis vectors (fiber and sheet) of $\mathbf{Q}_{\text{endo}}$. 
-   
-        Note that $\mathbf{Q}_{\text{LV}}^0$ and $\mathbf{Q}_{\text{RV}}$ are built with a flipped sign of the transmural direction. This produces and LV basis that rotates counter-clockwise and and RV basis that rotates clockwise. At the septum, the circumferential vectors point in the same direction. This allows for an easy SLERP interpolation (shortest path) to get $\mathbf{Q}_{\text{endo}}$. However, this produces that on the RV side the $\mathbf{Q}_{\text{endo}}$ basis points exactly in the opposite direction than $\mathbf{Q}_{\text{epi}}$ which causes issues with the SLERP interpolation. Flipping the vectors on the RV side fixes this issue and ensures the second interpolation is smooth.
 
    - In step 2, we do $\mathbf{Q}_{\text{LV}} = \text{orient\_matrix}(\mathbf{Q}_{\text{LV}}^0, \alpha_s, \text{abs}(\beta_s))$ and $\mathbf{Q}_{\text{RV}} = \text{orient\_matrix}(\mathbf{Q}_{\text{LV}}^0, \alpha_s, \text{abs}(\beta_s))$.
 
-        Note that $\mathbf{Q}_{\text{LV}}^0$ and  $\mathbf{Q}_{\text{RV}}^0$ have circumferential, longitudinal, and transmural directions that are equivalent **in the septum**. As defined $\beta_s$ is positive on the LV side (if $\beta_{\text{endo}}$ is positive), which produces the fiber vector to move outwards from the septum. On the RV side, $\beta_s$ is negative, which since we are on the other side of the septum, also rotates the fiber vector away from the septum. <<I will add a figure!>>
+      Note that $\mathbf{Q}_{\mathrm{LV}}^{0}$ and $\mathbf{Q}_{\mathrm{RV}}^{0}$ share equivalent circumferential, longitudinal, and transmural directions \textbf{within the septum}. By definition, $\beta_s > 0$ on the LV side (assuming $\beta_{\mathrm{endo}} > 0$), causing the fiber vector to rotate outward from the septum. On the RV side, $\beta_s < 0$ which also causes the fiber vector to rotate away from the septum. However, this is a negative angle at the RV endocardium, which is not what we want. Taking the absolute value $|\beta_s|$ yields the correct fiber angles while preserving the transmural variation of $\beta_{\mathrm{endo}}$ (positive at both side of the septum and 0 at the center of the septum).
+
+
+      ![Illustration of beta angle effect at endocardium](example/truncated/betaendo.png)
    
+   - After step 3, for elements where $d > 0.5$, flip the first and third basis vectors (fiber and sheet) of $\mathbf{Q}_{\text{endo}}$. 
+   
+      Note that $\mathbf{Q}_{\text{LV}}^{0}$ and $\mathbf{Q}_{\text{RV}}^{0}$ are constructed with opposite signs for the transmural direction. As a result, the LV basis rotates counterclockwise, whereas the RV basis rotates clockwise. At the septum, the circumferential vectors of both bases point in the same direction, which allows for a straightforward SLERP interpolation along the shortest path to obtain $\mathbf{Q}_{\text{endo}}$. However, on the RV side this construction causes the $\mathbf{Q}_{\text{endo}}$ basis to point exactly opposite to $\mathbf{Q}_{\text{epi}}$, leading to issues with the SLERP interpolation. Flipping the vectors on the RV side resolves this problem and ensures that the second interpolation remains smooth.
+
+            
+      ![Illustration of beta angle effect at endocardium](example/truncated/flipping.png)
 
 
 # Doste Method
