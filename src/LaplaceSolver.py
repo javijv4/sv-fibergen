@@ -14,7 +14,7 @@ Supports both:
 import os
 from xml.etree import ElementTree as ET
 from xml.dom import minidom
-from .SurfaceNames import SurfaceName
+from SurfaceNames import SurfaceName
 
 
 class LaplaceSolver:
