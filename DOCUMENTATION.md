@@ -3,36 +3,21 @@
 This document describes the mathematical framework for generating myocardial fiber orientations in cardiac geometries using Laplace-Dirichlet rule-based methods.
 
 # General Overview of the Fiber Generation Methods
-To explain the main steps and functions of the code, in the following we explain the fiber generation steps for a **single ventricle**. In the next section these concepts are expanded to the biventricular geometries using the Bayer or Doste method. 
+To explain the main steps and functions of the code, in the following we explain the main concepts and methods to generate fibers. In the next section these concepts are used to describe the Bayer and Doste method. 
 
-## 1. Boundaries
+## 1. Laplace Problem
 
-The fiber generation algorithm requires specific boundary surfaces to be defined on the cardiac mesh. For a single ventricle geometry, the following surfaces must be identified:
-
-- **Epicardium (epi)**: The outer surface of the ventricle
-- **Endocardium (endo)**: The inner surface of the ventricle
-- **Base**: The basal (top) boundary of the ventricle
-- **Apex (epi_apex)**: The epicardial apex region
-
-The apex surface is automatically generated from the epicardium by identifying the point furthest from the base. Specifically, the apex point $\mathbf{p}_{\text{apex}}$ is found as:
+The foundation of the rule-based fiber generation is the solution of Laplace-Dirichlet boundary value problems. These provide scalar fields $\phi$ (surface1 → surface2) that satisfy:
 
 $$
-\mathbf{p}_{\text{apex}} = \arg\min_{\mathbf{p} \in S_{\text{epi}} \setminus S_{\text{base}}} \|\mathbf{p} - \mathbf{c}_{\text{base}}\|
+\begin{align}
+\nabla^2 \phi = 0 &\quad \text{in } \Omega \\
+\phi_t = 0 & \quad\text{on } S_{\text{surface1}} \\
+\phi_t = 1 & \quad\text{on } S_{\text{surface2}}
+\end{align}
 $$
 
-where $S_{\text{epi}}$ is the epicardial surface, $S_{\text{base}}$ is the base surface, and $\mathbf{c}_{\text{base}}$ is the centroid of the base. The apex surface consists of all elements in the epicardium that contain this apex point.
-
-## 2. Laplace Problem
-
-The foundation of the rule-based fiber generation is the solution of Laplace-Dirichlet boundary value problems. These provide scalar fields $\phi$ that satisfy:
-
-$$
-\nabla^2 \phi = 0 \quad \text{in } \Omega
-$$
-
-with appropriate Dirichlet boundary conditions on $\partial\Omega$.
-
-### 2.1 Transmural Direction
+### 1.1 Transmural Direction
 
 The transmural field $\phi_t$ (endo → epi) characterizes the wall thickness direction, varying from endocardium to epicardium:
 
@@ -46,7 +31,7 @@ $$
 
 This field is normalized to $[0, 1]$ range where $\phi_t = 0$ at the endocardium and $\phi_t = 1$ at the epicardium.
 
-### 2.2 Longitudinal Direction
+### 1.2 Longitudinal Direction
 
 The longitudinal field $\phi_\ell$ (apex → base) characterizes the apex-to-base direction:
 
@@ -65,14 +50,14 @@ This field is also normalized to $[0, 1]$ where $\phi_\ell = 0$ at the apex and 
 - `Spectral_radius_of_infinite_time_step = 0.0`
 - Single time step to obtain the steady-state solution directly
 
-## 3. Definition of Basis
+## 2. Definition of Basis
 
 A local orthonormal basis $\{\mathbf{e}_c, \mathbf{e}_\ell, \mathbf{e}_t\}$ is constructed at each point in the myocardium, where:
 - $\mathbf{e}_c$: circumferential direction
 - $\mathbf{e}_\ell$: longitudinal direction  
 - $\mathbf{e}_t$: transmural direction
 
-### 3.1 Obtain Gradients from Laplace Solutions
+### 2.1 Obtain Gradients from Laplace Solutions
 
 The gradients of the Laplace fields provide natural directional vectors. The gradients are computed at mesh nodes and then averaged to cell centers for smoother results:
 
@@ -86,7 +71,7 @@ $$
 \hat{\mathbf{g}}_t = \frac{\mathbf{g}_t}{\|\mathbf{g}_t\|}, \quad \hat{\mathbf{g}}_\ell = \frac{\mathbf{g}_\ell}{\|\mathbf{g}_\ell\|}
 $$
 
-### 3.2 Calculate Circumferential Direction
+### 2.2 Calculate Circumferential Direction
 
 The local orthonormal basis is constructed using the `axis` function. Given the longitudinal direction $\hat{\mathbf{g}}_\ell$ and the transmural direction $\hat{\mathbf{g}}_t$:
 
@@ -100,18 +85,16 @@ The local orthonormal basis is constructed using the `axis` function. Given the 
 3. **Circumferential basis vector** (orthogonal to both):
     $$\mathbf{e}_c = \mathbf{e}_\ell \times \mathbf{e}_t$$
 
-This ensures a right-handed orthonormal coordinate system at each element.
+This ensures a right-handed orthonormal coordinate system at each element. We implement this in the **axis** function, $\mathbf Q=(\mathbf{e}_c, \mathbf{e}_\ell, \mathbf{e}_t)=\text{axis}(\hat{\mathbf{g}}_\ell, \hat{\mathbf{g}}_t)$.
 
-## 4. Definition of Angles over the Geometry
+## 3. Definition of Angles over the Geometry
 
-Two angles define the fiber orientation relative to the local basis:
+Two angles define the fiber orientation relative to the local basis $\mathbf Q=(\mathbf e_c, \mathbf e_\ell, \mathbf e_t)$:
 
-- **$\alpha$ (helix angle)**: Rotation angle from the circumferential direction toward the longitudinal direction
-- **$\beta$ (transverse angle)**: Rotation angle from the fiber direction (after $\alpha$ rotation) toward the transmural direction
+- **$\alpha$ (helix angle)**: Rotation angle using as axis of rotation $\mathbf{e}_t$. Returns a rotated basis $\mathbf Q^{(\alpha)}=(\mathbf e_c', \mathbf e_\ell', \mathbf e_t)$
+- **$\beta$ (transverse angle)**: Rotation angle using as axis of rotation $\mathbf{e}_\ell'$. Returns the fiber ($\mathbf f$), sheetnormal ($\mathbf n$), and sheet ($\mathbf s$) vectors $\mathbf Q^{(\alpha, \beta)} = (\mathbf f, \mathbf n, \mathbf s)$.
 
-### Single Ventricle Formulation
-
-For a single ventricle (or septum-less approximation), the angles vary linearly across the wall thickness based on the transmural coordinate $\phi_t$:
+The angles vary linearly across the wall thickness based on the transmural coordinate $\phi_t$. For the single ventricle this is:
 
 $$
 \alpha(\phi_t) = \alpha_{\text{endo}}(1 - \phi_t) + \alpha_{\text{epi}}\phi_t
@@ -122,66 +105,94 @@ $$
 $$
 
 where:
-- $\alpha_{\text{endo}}, \alpha_{\text{epi}}$: helix angles at endocardium and epicardium (typically $60°$ and $-60°$)
-- $\beta_{\text{endo}}, \beta_{\text{epi}}$: transverse angles at endocardium and epicardium (typically $20°$ and $-20°$)
+- $\alpha_{\text{endo}}, \alpha_{\text{epi}}$: helix angles at endocardium and epicardium
+- $\beta_{\text{endo}}, \beta_{\text{epi}}$: transverse angles at endocardium and epicardium
 
-## 5. Rotation of the Basis
+
+## 4. Rotation of the Basis
 
 The fiber direction is obtained by applying two successive rotations to the local basis.
 
-### 5.1 Rotation over $\alpha$ (Helix Angle)
+### 4.1 Rotation Using Matrices (Bayer)
 
-The first rotation is by angle $\alpha$ about the transmural axis $\mathbf{e}_t$. The rotation matrix is:
+The two-step rotation can be expressed with standard rotation matrices applied to the local basis $\mathbf{Q} = [\mathbf{e}_c, \mathbf{e}_\ell, \mathbf{e}_t]$:
+
+- Helix rotation by $\alpha$ about the transmural axis $\mathbf{e}_t$:
 
 $$
 \mathbf{R}_\alpha = \begin{bmatrix}
 \cos\alpha & -\sin\alpha & 0 \\
 \sin\alpha & \cos\alpha & 0 \\
 0 & 0 & 1
-\end{bmatrix}
+\end{bmatrix}, \quad
+\mathbf{Q}^{(\alpha)} = \mathbf{Q}\,\mathbf{R}_\alpha.
 $$
 
-Applied to the basis matrix $\mathbf{Q} = [\mathbf{e}_c, \mathbf{e}_\ell, \mathbf{e}_t]$:
-
-$$
-\mathbf{Q}^{(\alpha)} = \mathbf{Q} \mathbf{R}_\alpha
-$$
-
-This rotates the circumferential direction toward the longitudinal direction, creating the characteristic helical pattern of cardiac fibers.
-
-### 5.2 Rotation over $\beta$ (Transverse Angle)
-
-The second rotation is by angle $\beta$ about the rotated longitudinal axis $\mathbf{e}_\ell^{(\alpha)}$ (the second column of $\mathbf{Q}^{(\alpha)}$). The rotation matrix is:
+- Transverse rotation by $\beta$ about the rotated longitudinal axis $\mathbf{e}_\ell^{(\alpha)}$ (the second column of $\mathbf{Q}^{(\alpha)}$):
 
 $$
 \mathbf{R}_\beta = \begin{bmatrix}
 \cos\beta & 0 & \sin\beta \\
 0 & 1 & 0 \\
 -\sin\beta & 0 & \cos\beta
-\end{bmatrix}
+\end{bmatrix}, \quad
+\mathbf{Q}^{(\alpha,\beta)} = \mathbf{Q}^{(\alpha)}\,\mathbf{R}_\beta.
 $$
 
-The final basis is:
+We implement this in the **orient\_matrix** function, $\mathbf Q^{(\alpha, \beta)}=(\mathbf{f}, \mathbf{n}, \mathbf{s})=\text{orient\_matrix}(\mathbf Q, \alpha, \beta)$.
+
+Note: In the original Bayer paper the second matrix was written as,
+$$
+\mathbf{R}_\beta = \begin{bmatrix}
+1 & 0 & 0 \\
+0 & \cos\beta &  \sin\beta \\
+0 & -\sin\beta &  \cos\beta 
+\end{bmatrix}.
+$$
+Given how the orthogonal basis are ordered $(\mathbf{e}_c', \mathbf{e}_\ell', \mathbf{e}_t)$, this is equivalent to rotate over the first vector $\mathbf{e}_c'$ which is not what we want and keeps the fiber orientation unchanged and unaffected by $\beta$ angles.
+
+
+### 4.2 Rotation Using Rodrigues' Formula (Doste)
+
+These rotations can also be achieved using the Rodrigues rotation formula. For a unit axis $\mathbf{n}$ and angle $\theta$:
 
 $$
-\mathbf{Q}^{(\alpha,\beta)} = \mathbf{Q}^{(\alpha)} \mathbf{R}_\beta
+\mathbf{R}(\theta, \mathbf{n}) = \mathbf{I}\cos\theta + [\mathbf{n}]_\times \sin\theta + \mathbf{n}\,\mathbf{n}^T (1 - \cos\theta),
 $$
 
-The fiber direction is the first column of $\mathbf{Q}^{(\alpha,\beta)}$:
+where the skew-symmetric matrix $[\mathbf{n}]_\times$ is
 
 $$
-\mathbf{f} = \mathbf{Q}^{(\alpha,\beta)}[:, 0]
+[\mathbf{n}]_\times = \begin{bmatrix}
+0 & -n_z & n_y \\
+n_z & 0 & -n_x \\
+-n_y & n_x & 0
+\end{bmatrix}, \quad \mathbf{n} = (n_x, n_y, n_z)^T.
 $$
 
-The sheet normal and sheet directions are the second and third columns, respectively.
+Applying the two-step rotation to the local basis:
 
-## 6. Basis Interpolation (Bislerp)
+- Helix rotation by $\alpha$ about $\mathbf{e}_t$:
 
-When working with biventricular geometries, different basis vectors are computed for the left ventricle (LV), right ventricle (RV), and epicardium. These must be smoothly interpolated to avoid discontinuities.
+$$
+\mathbf{Q}^{(\alpha)} = \mathbf{Q}\,\mathbf{R}(\alpha, \mathbf{e}_t).
+$$
+
+- Transverse rotation by $\beta$ about the rotated longitudinal axis $\mathbf{e}_\ell^{(\alpha)}$:
+
+$$
+\mathbf{Q}^{(\alpha,\beta)} = \mathbf{Q}^{(\alpha)}\,\mathbf{R}(\beta, \mathbf{e}_\ell^{(\alpha)}), \quad \mathbf{e}_\ell^{(\alpha)} = \big(\mathbf{Q}^{(\alpha)}\big)[:, 1].
+$$
+
+We implement this in the **orient\_rodrigues** function, $\mathbf Q^{(\alpha, \beta)}=(\mathbf{f}, \mathbf{n}, \mathbf{s})=\text{orient\_rodrigues}(\mathbf Q, \alpha, \beta)$.
+
+## 5. Basis Interpolation
+
+When working with biventricular geometries, different orthogonal basis are computed for the left ventricle (LV) and right ventricle (RV). For this, the orthogonal basis are represented as quaternions, which are then interpolated using spherical linear interpolation (SLERP).
 
 ### Spherical Linear Interpolation (SLERP)
 
-Simple linear interpolation of rotation matrices can produce non-orthogonal results. Instead, **bislerp** (bilinear spherical interpolation) is used, which operates via quaternion representation:
+Simple linear interpolation of rotation matrices can produce non-orthogonal results. Instead, **interpolate_basis** (bilinear spherical interpolation) is used, which operates via quaternion representation:
 
 Given two rotation matrices $\mathbf{Q}_1$ and $\mathbf{Q}_2$, and interpolation parameter $t \in [0, 1]$:
 
@@ -200,34 +211,49 @@ Given two rotation matrices $\mathbf{Q}_1$ and $\mathbf{Q}_2$, and interpolation
 
 For nearly parallel quaternions ($\sin\theta_0 < 10^{-6}$), linear interpolation is used instead to avoid numerical issues.
 
-### Application in Biventricular Context
+We implement this in the **interpolate_basis** function, $\mathbf{Q}(t) = \text{interpolate\_basis}(\mathbf{Q}_1, \mathbf{Q}_2, t)$.
 
-The bislerp is applied twice in the Bayer method:
+# Bayer Method
 
-1. **Endocardial interpolation** (LV to RV):
-   $$\mathbf{Q}_{\text{endo}} = \text{bislerp}(\mathbf{Q}_{\text{LV}}, \mathbf{Q}_{\text{RV}}, d)$$
-   where $d = \phi_{\text{RV}} / (\phi_{\text{LV}} + \phi_{\text{RV}})$ is the interventricular parameter.
+The Bayer et al. (2012) method is designed for truncated biventricular geometries without outflow tracts.
 
-2. **Transmural interpolation** (endocardium to epicardium):
-   $$\mathbf{Q} = \text{bislerp}(\mathbf{Q}_{\text{endo}}, \mathbf{Q}_{\text{epi}}, \phi_t)$$
+## Required Boundaries
 
-**Important**: To maintain coherent fiber directions across the septum, basis vectors are flipped when $d > 0.5$ (RV side):
-$$\mathbf{Q}_{\text{endo}}[:, 0] \leftarrow -\mathbf{Q}_{\text{endo}}[:, 0], \quad \mathbf{Q}_{\text{endo}}[:, 2] \leftarrow -\mathbf{Q}_{\text{endo}}[:, 2]$$
+The fiber generation algorithm requires specific boundary surfaces to be defined on the cardiac mesh:
 
-This approach eliminates the discontinuity present in the original Bayer formulation.
+- **Epicardium**: The outer surface of the biventricle
+- **LV Endocardium**: The inner surface of the left ventricle
+- **RV Endocardium**: The inner surface of the right ventricle
+- **Base**: The basal (top) boundary of the geometry
+- **Apex**: The epicardial apex region
 
-## 7. Bayer Method
+The apex surface is automatically generated from the epicardium by identifying the point furthest from the base. Specifically, the apex point $\mathbf{p}_{\text{apex}}$ is found as:
 
-The Bayer et al. (2012) method is designed for truncated biventricular geometries without outflow tracts. 
+$$
+\mathbf{p}_{\text{apex}} = \arg\min_{\mathbf{p} \in S_{\text{epi}} \setminus S_{\text{base}}} \|\mathbf{p} - \mathbf{c}_{\text{base}}\|
+$$
+
+where $S_{\text{epi}}$ is the epicardial surface, $S_{\text{base}}$ is the base surface, and $\mathbf{c}_{\text{base}}$ is the centroid of the base. The apex surface consists of all elements in the epicardium that contain this apex point.
 
 ### Required Laplace Fields
 
 Four Laplace problems are solved:
 
-1. **Transmural**: $\phi_{\text{epi}}$ (endo → epi)
-2. **LV chamber**: $\phi_{\text{LV}}$ (RV free wall → LV free wall)
-3. **RV chamber**: $\phi_{\text{RV}}$ (LV free wall → RV free wall)
+1. **Epi transmural**: $\phi_{\text{epi}}$ (LV endo and RV endo → epi)
+2. **LV transmural**: $\phi_{\text{LV}}$ (RV endo and epi → LV endo)
+2. **RV transmural**: $\phi_{\text{RV}}$ (LV endo and epi → RV endo)
 4. **Apex-to-base**: $\phi_{\text{AB}}$ (apex → base)
+
+## Input Angles
+
+The Bayer method requires four input angle parameters (typically specified in degrees):
+
+- **$\alpha_{\text{endo}}$**: Endocardial helix angle, typically $60°$
+- **$\alpha_{\text{epi}}$**: Epicardial helix angle, typically $-60°$
+- **$\beta_{\text{endo}}$**: Endocardial transverse angle, typically $20°$
+- **$\beta_{\text{epi}}$**: Epicardial transverse angle, typically $-20°$
+
+These angles define the fiber architecture that varies smoothly from endocardium to epicardium across both ventricles.
 
 ### Angle Definition
 
@@ -253,73 +279,117 @@ $$
 \beta_w = \beta_{\text{endo}}(1 - \phi_{\text{epi}}) + \beta_{\text{epi}}\phi_{\text{epi}}
 $$
 
-### Algorithm Steps
+### Algorithm Steps (as in Bayer's paper)
 
-1. Construct LV basis: $\mathbf{Q}_{\text{LV}}^0 = \text{axis}(\nabla\phi_{\text{AB}}, -\nabla\phi_{\text{LV}})$
-2. Rotate by septum angles: $\mathbf{Q}_{\text{LV}} = \text{orient}(\mathbf{Q}_{\text{LV}}^0, \alpha_s, \beta_s)$
-3. Construct RV basis: $\mathbf{Q}_{\text{RV}}^0 = \text{axis}(\nabla\phi_{\text{AB}}, \nabla\phi_{\text{RV}})$
-4. Rotate by septum angles (note sign flip for $\beta$): $\mathbf{Q}_{\text{RV}} = \text{orient}(\mathbf{Q}_{\text{RV}}^0, \alpha_s, -\beta_s)$
-5. Interpolate endocardial basis: $\mathbf{Q}_{\text{endo}} = \text{bislerp}(\mathbf{Q}_{\text{LV}}, \mathbf{Q}_{\text{RV}}, d)$
-6. Flip vectors for $d > 0.5$ (to maintain coherence)
-7. Construct epicardial basis: $\mathbf{Q}_{\text{epi}}^0 = \text{axis}(\nabla\phi_{\text{AB}}, \nabla\phi_{\text{epi}})$
-8. Rotate by wall angles: $\mathbf{Q}_{\text{epi}} = \text{orient}(\mathbf{Q}_{\text{epi}}^0, \alpha_w, \beta_w)$
-9. Interpolate final basis: $\mathbf{Q} = \text{bislerp}(\mathbf{Q}_{\text{endo}}, \mathbf{Q}_{\text{epi}}, \phi_{\text{epi}})$
-10. Extract fiber directions: $\mathbf{f} = \mathbf{Q}[:, 0]$, $\mathbf{s} = \mathbf{Q}[:, 1]$, $\mathbf{n} = \mathbf{Q}[:, 2]$
+1. **Construct LV and RV basis**:
+   - $\mathbf{Q}_{\text{LV}}^0 = \text{axis}(\nabla\phi_{\text{AB}}, -\nabla\phi_{\text{LV}})$
+   - $\mathbf{Q}_{\text{RV}}^0 = \text{axis}(\nabla\phi_{\text{AB}}, \nabla\phi_{\text{RV}})$
 
-### Implementation ([main_bayer.py](main_bayer.py))
+2. **Rotate by septum angles**:
+   - $\mathbf{Q}_{\text{LV}} = \text{orient\_matrix}(\mathbf{Q}_{\text{LV}}^0, \alpha_s, \beta_s)$
+   - $\mathbf{Q}_{\text{RV}} = \text{orient\_matrix}(\mathbf{Q}_{\text{RV}}^0, \alpha_s, \beta_s)$
 
-The implementation follows this workflow:
+3. **Interpolate endocardial basis**:
+   - $\mathbf{Q}_{\text{endo}} = \text{bislerp}(\mathbf{Q}_{\text{LV}}, \mathbf{Q}_{\text{RV}}, d)$
 
-```python
-params = {
-    "ALFA_END": 60.0,   # Endocardial helix angle (degrees)
-    "ALFA_EPI": -60.0,  # Epicardial helix angle (degrees)
-    "BETA_END": 20.0,   # Endocardial transverse angle (degrees)
-    "BETA_EPI": -20.0,  # Epicardial transverse angle (degrees)
-}
-```
+4. **Construct epicardial basis**:
+   - $\mathbf{Q}_{\text{epi}}^0 = \text{axis}(\nabla\phi_{\text{AB}}, \nabla\phi_{\text{epi}})$
 
-The script:
-1. Generates the apex surface from the epicardium
-2. Runs the Laplace solver with appropriate boundary conditions
-3. Loads the Laplace solutions and computes gradients at cell centers
-4. Applies the Bayer algorithm using vectorized operations
-5. Saves fiber, sheet, and sheet-normal directions to separate VTU files
+5. **Rotate by wall angles**:
+   - $\mathbf{Q}_{\text{epi}} = \text{orient\_matrix}(\mathbf{Q}_{\text{epi}}^0, \alpha_w, \beta_w)$
 
-**Key differences from original Bayer paper**:
-- Vector flipping strategy instead of the correction term (eliminates discontinuity)
-- Beta rotation applied correctly about the longitudinal axis (not circumferential)
-- All operations fully vectorized for performance
+6. **Interpolate final basis**:
+   - $\mathbf{Q} = \text{bislerp}(\mathbf{Q}_{\text{endo}}, \mathbf{Q}_{\text{epi}}, \phi_{\text{epi}})$
+   - Extract: $\mathbf{f} = \mathbf{Q}[:, 0]$, $\mathbf{n} = \mathbf{Q}[:, 1]$, $\mathbf{s} = \mathbf{Q}[:, 2]$
 
-## 8. Doste Method
+
+Note. The bislerp function performs the same SLERP operation as interpolate_basis, but includes an additional correction to account for the fact that fiber directions are equivalent up to sign; that is, for the physical applications considered, using $\mathbf{f}$ or $-\mathbf{f}$ is equivalent. This correction flips each vector of the basis $\mathbf{Q}_1$ and selects the flipped configuration that is closest to the target basis $\mathbf{Q}_2$. However, this approach can introduce issues (see the next section), particularly when $\mathbf{Q}_1$ and $\mathbf{Q}_2$ are nearly orthogonal. In such cases, small perturbations in the basis can lead to drastically different interpolation results.
+
+### Modified algorithm steps
+When running the original implementation, we observed the resulting fibers showed discontinuities that arise due to the **bislerp** function. To solve these issues, we modify the algorithm as follows:
+
+
+   - In step 2, we do $\mathbf{Q}_{\text{LV}} = \text{orient\_matrix}(\mathbf{Q}_{\text{LV}}^0, \alpha_s, \text{abs}(\beta_s))$ and $\mathbf{Q}_{\text{RV}} = \text{orient\_matrix}(\mathbf{Q}_{\text{LV}}^0, \alpha_s, \text{abs}(\beta_s))$.
+
+      Note that $\mathbf{Q}_{\mathrm{LV}}^{0}$ and $\mathbf{Q}_{\mathrm{RV}}^{0}$ share equivalent circumferential, longitudinal, and transmural directions \textbf{within the septum}. By definition, $\beta_s > 0$ on the LV side (assuming $\beta_{\mathrm{endo}} > 0$), causing the fiber vector to rotate outward from the septum. On the RV side, $\beta_s < 0$ which also causes the fiber vector to rotate away from the septum. However, this is a negative angle at the RV endocardium, which is not what we want. Taking the absolute value $|\beta_s|$ yields the correct fiber angles while preserving the transmural variation of $\beta_{\mathrm{endo}}$ (positive at both side of the septum and 0 at the center of the septum).
+
+
+      ![Illustration of beta angle effect at endocardium](example/truncated/betaendo.png)
+   
+   - After step 3, for elements where $d > 0.5$, flip the first and third basis vectors (fiber and sheet) of $\mathbf{Q}_{\text{endo}}$. 
+   
+      Note that $\mathbf{Q}_{\text{LV}}^{0}$ and $\mathbf{Q}_{\text{RV}}^{0}$ are constructed with opposite signs for the transmural direction. As a result, the LV basis rotates counterclockwise, whereas the RV basis rotates clockwise. At the septum, the circumferential vectors of both bases point in the same direction, which allows for a straightforward SLERP interpolation along the shortest path to obtain $\mathbf{Q}_{\text{endo}}$. However, on the RV side this construction causes the $\mathbf{Q}_{\text{endo}}$ basis to point exactly opposite to $\mathbf{Q}_{\text{epi}}$, leading to issues with the SLERP interpolation. Flipping the vectors on the RV side resolves this problem and ensures that the second interpolation remains smooth.
+
+            
+      ![Illustration of beta angle effect at endocardium](example/truncated/flipping.png)
+
+
+# Doste Method
 
 The Doste et al. (2019) method extends the fiber generation to biventricular geometries with **outflow tracts**, requiring valve surfaces to be explicitly defined.
 
-### Required Surfaces
+## Required Boundaries
 
-In addition to standard boundaries:
-- **Mitral valve (mv)**: LV inflow
-- **Aortic valve (av)**: LV outflow
-- **Tricuspid valve (tv)**: RV inflow
-- **Pulmonary valve (pv)**: RV outflow
+The fiber generation algorithm requires the following boundary surfaces:
+
+- **Epicardium**: The outer surface of the biventricle
+- **LV Endocardium**: The inner surface of the left ventricle
+- **RV Endocardium**: The inner surface of the right ventricle
+- **Mitral valve**: LV inflow boundary
+- **Aortic valve**: LV outflow boundary
+- **Tricuspid valve**: RV inflow boundary
+- **Pulmonary valve**: RV outflow boundary
+- **Apex**: The epicardial apex region
+- **Top**: Surface that includes all valves. Only needed if the Apex needs to be generated.
+
+The apex surface is automatically generated from the epicardium by identifying the point furthest from the base/top boundary. The apex point $\mathbf{p}_{\text{apex}}$ is found as:
+
+$$
+\mathbf{p}_{\text{apex}} = \arg\min_{\mathbf{p} \in S_{\text{epi}} \setminus S_{\text{top}}} \|\mathbf{p} - \mathbf{c}_{\text{top}}\|
+$$
+
+where $S_{\text{epi}}$ is the epicardial surface, $S_{\text{top}}$ is the top surface, and $\mathbf{c}_{\text{top}}$ is the centroid of the top boundary.
 
 ### Required Laplace Fields
 
-Eight Laplace problems are solved (4 per ventricle):
+Ten Laplace problems are solved:
+
+**Ventricular**:
+1. $\phi_{\text{BiV}}$: RV endocardium → LV endocardium (interventricular)
 
 **Left Ventricle**:
-1. $\phi_{\text{LV,trans}}$: LV endocardium → epicardium (transmural)
-2. $\phi_{\text{LV,mv}}$: Mitral valve → other boundaries (MV longitudinal)
-3. $\phi_{\text{LV,av}}$: Aortic valve → other boundaries (AV longitudinal)
-4. $\phi_{\text{LV,ven}}$: RV → LV (ventricular)
+1. $\phi_{\text{LV,trans}}$: Epicardium → LV endocardium (LV transmural)
+2. $\phi_{\text{LV,av}}$: Aortic valve → apex (LV longitudinal from AV)
+3. $\phi_{\text{LV,mv}}$: Mitral valve → apex (LV longitudinal from MV)
+4. $\phi_{\text{LV,weight}}$: Aortic valve → mitral valve (LV valve weight)
 
 **Right Ventricle**:
-1. $\phi_{\text{RV,trans}}$: RV endocardium → epicardium (transmural)
-2. $\phi_{\text{RV,tv}}$: Tricuspid valve → other boundaries (TV longitudinal)
-3. $\phi_{\text{RV,pv}}$: Pulmonary valve → other boundaries (PV longitudinal)
-4. $\phi_{\text{RV,ven}}$: LV → RV (ventricular)
+1. $\phi_{\text{RV,trans}}$: Epicardium → RV endocardium (RV transmural)
+2. $\phi_{\text{RV,pv}}$: Pulmonary valve → apex (RV longitudinal from PV)
+3. $\phi_{\text{RV,tv}}$: Tricuspid valve → apex (RV longitudinal from TV)
+4. $\phi_{\text{RV,weight}}$: Pulmonary valve → tricuspid valve (RV valve weight)
 
-Additionally, $\phi_{\text{epi,trans}}$ provides global transmural coordinate.
+**Global**:
+1. $\phi_{\text{epi,trans}}$: LV and RV endocardium → epicardium (global transmural)
+
+## Input Angles
+
+The Doste method requires twelve input angle parameters (typically specified in degrees) to handle both ventricles and outflow tracts:
+
+- **$\alpha_{\text{endo,LV}}$**: LV endocardial helix angle, typically $60°$
+- **$\alpha_{\text{epi,LV}}$**: LV epicardial helix angle, typically $-60°$
+- **$\beta_{\text{endo,LV}}$**: LV endocardial transverse angle, typically $20°$
+- **$\beta_{\text{epi,LV}}$**: LV epicardial transverse angle, typically $-20°$
+- **$\alpha_{\text{endo,RV}}$**: RV endocardial helix angle, typically $90°$
+- **$\alpha_{\text{epi,RV}}$**: RV epicardial helix angle, typically $-25°$
+- **$\beta_{\text{endo,RV}}$**: RV endocardial transverse angle, typically $20°$
+- **$\beta_{\text{epi,RV}}$**: RV epicardial transverse angle, typically $-20°$
+- **$\alpha_{\text{OT,endo,LV}}$**: LV outflow tract endocardial helix angle, typically $90°$
+- **$\alpha_{\text{OT,epi,LV}}$**: LV outflow tract epicardial helix angle, typically $0°$
+- **$\alpha_{\text{OT,endo,RV}}$**: RV outflow tract endocardial helix angle, typically $90°$
+- **$\alpha_{\text{OT,epi,RV}}$**: RV outflow tract epicardial helix angle, typically $0°$
+
+The outflow tract angles are blended with ventricular angles using the valve weight functions to create smooth transitions between the ventricular and outflow tract regions.
 
 ### Valve Weight Functions
 
@@ -338,7 +408,7 @@ The redistribution clips values at quantiles $q_{\text{low}}$ and $q_{\text{up}}
 
 The angles are region-specific with outflow tract blending:
 
-**LV helix angles**:
+**LV wall angles**:
 $$
 \alpha_{\text{LV,endo}} = \alpha_{\text{endo,LV}} w_{\text{LV}} + \alpha_{\text{OT,endo,LV}}(1 - w_{\text{LV}})
 $$
@@ -346,83 +416,68 @@ $$
 \alpha_{\text{LV,epi}} = \alpha_{\text{epi,LV}} w_{\text{LV}} + \alpha_{\text{OT,epi,LV}}(1 - w_{\text{LV}})
 $$
 $$
-\alpha_{\text{LV}} = \alpha_{\text{LV,endo}}(1 - \phi_{\text{epi,trans}}) + \alpha_{\text{LV,epi}}\phi_{\text{epi,trans}}
-$$
-
-Similar formulations apply for $\alpha_{\text{RV}}$ and $\beta$ angles.
-
-**Septum angles** are computed by blending LV and RV contributions using septal position.
-
-### Basis Construction
-
-For each ventricle, the longitudinal direction blends the two valve gradients:
-
-$$
-\mathbf{g}_{\ell,\text{LV}} = w_{\text{LV}} \nabla\phi_{\text{LV,mv}} + (1 - w_{\text{LV}})\nabla\phi_{\text{LV,av}}
-$$
-
-The transmural direction is orthogonalized:
-
-$$
-\mathbf{e}_{t,\text{LV}} = \text{normalize}\left(\nabla\phi_{\text{LV,trans}} - (\mathbf{e}_{\ell,\text{LV}} \cdot \nabla\phi_{\text{LV,trans}})\mathbf{e}_{\ell,\text{LV}}\right)
-$$
-
-Circumferential direction completes the orthonormal system:
-
-$$
-\mathbf{e}_{c,\text{LV}} = \mathbf{e}_{\ell,\text{LV}} \times \mathbf{e}_{t,\text{LV}}
-$$
-
-### Rotation and Interpolation
-
-The rotation uses a more general Rodriguez formula. For rotation by $\alpha$ about axis $\mathbf{n}$:
-
-$$
-\mathbf{R}(\alpha, \mathbf{n}) = \mathbf{I}\cos\alpha + [\mathbf{n}]_\times \sin\alpha + \mathbf{n}\mathbf{n}^T(1 - \cos\alpha)
-$$
-
-where $[\mathbf{n}]_\times$ is the skew-symmetric matrix of $\mathbf{n}$.
-
-The rotations are applied:
-1. First rotation by $\alpha$ about $\mathbf{e}_t$
-2. Second rotation by $\beta$ about rotated $\mathbf{e}_\ell$
-
-Finally, bislerp interpolation is performed in three stages:
-$$
-\mathbf{Q}_{\text{epi}} = \text{bislerp}(\mathbf{Q}_{\text{RV,epi}}, \mathbf{Q}_{\text{LV,epi}}, \phi_{\text{ven,trans}})
+\alpha_{\text{wall,LV}} = \alpha_{\text{LV,endo}}(1 - \phi_{\text{epi,trans}}) + \alpha_{\text{LV,epi}}\phi_{\text{epi,trans}}
 $$
 $$
-\mathbf{Q}_{\text{endo}} = \text{bislerp}(\mathbf{Q}_{\text{RV,septum}}, \mathbf{Q}_{\text{LV,septum}}, \phi_{\text{ven,trans}})
-$$
-$$
-\mathbf{Q} = \text{bislerp}(\mathbf{Q}_{\text{endo}}, \mathbf{Q}_{\text{epi}}, \phi_{\text{epi,trans}})
+\beta_{\text{wall,LV}} = \left[\beta_{\text{endo,LV}}(1 - \phi_{\text{epi,trans}}) + \beta_{\text{epi,LV}}\phi_{\text{epi,trans}}\right] w_{\text{LV}}
 $$
 
-### Implementation ([main_doste.py](main_doste.py))
+**RV wall angles**:
+$$
+\alpha_{\text{RV,endo}} = \alpha_{\text{endo,RV}} w_{\text{RV}} + \alpha_{\text{OT,endo,RV}}(1 - w_{\text{RV}})
+$$
+$$
+\alpha_{\text{RV,epi}} = \alpha_{\text{epi,RV}} w_{\text{RV}} + \alpha_{\text{OT,epi,RV}}(1 - w_{\text{RV}})
+$$
+$$
+\alpha_{\text{wall,RV}} = \alpha_{\text{RV,endo}}(1 - \phi_{\text{epi,trans}}) + \alpha_{\text{RV,epi}}\phi_{\text{epi,trans}}
+$$
+$$
+\beta_{\text{wall,RV}} = \left[\beta_{\text{endo,RV}}(1 - \phi_{\text{epi,trans}}) + \beta_{\text{epi,RV}}\phi_{\text{epi,trans}}\right] w_{\text{RV}}
+$$
 
-The implementation uses different angle parameters for each region:
+**Septum angles**: Computed by blending LV and RV contributions weighted by septal position:
+$$
+s = \frac{|\phi_{\text{BiV}} - 0.5| - \min(|\phi_{\text{BiV}} - 0.5|)}{\max(|\phi_{\text{BiV}} - 0.5|) - \min(|\phi_{\text{BiV}} - 0.5|)}
+$$
+$$
+\alpha_{\text{septum}} = \alpha_{\text{LV,endo}} \cdot s \cdot \phi_{\text{LV,trans}} + \alpha_{\text{RV,endo}} \cdot s \cdot \phi_{\text{RV,trans}}
+$$
+$$
+\beta_{\text{septum}} = \beta_{\text{endo,LV}} \cdot \phi_{\text{LV,trans}} \cdot w_{\text{LV}} + \beta_{\text{endo,RV}} \cdot \phi_{\text{RV,trans}} \cdot w_{\text{RV}}
+$$
 
-```python
-params = {
-    'AENDORV': 90,    'AEPIRV': -25,     # RV helix angles
-    'AENDOLV': 60,    'AEPILV': -60,     # LV helix angles
-    'AOTENDOLV': 90,  'AOTEPILV': 0,     # LV outflow tract helix
-    'AOTENDORV': 90,  'AOTEPIRV': 0,     # RV outflow tract helix
-    'BENDORV': 20,    'BEPIRV': -20,     # RV transverse angles
-    'BENDOLV': 20,    'BEPILV': -20,     # LV transverse angles
-}
-```
+### Algorithm Steps
 
-The workflow:
-1. Generates apex surface
-2. Runs Laplace solver for all 8+ fields
-3. Computes basis vectors separately for LV and RV
-4. Applies region-specific angle formulations with valve weighting
-5. Performs three-stage bislerp interpolation
-6. Saves fiber, sheet, and sheet-normal directions
+1. **Construct LV and RV longitudinal directions**:
+   - Blend valve gradients: $\mathbf{g}_{\ell,\text{LV}} = w_{\text{LV}} \nabla\phi_{\text{LV,mv}} + (1 - w_{\text{LV}})\nabla\phi_{\text{LV,av}}$
+   - Blend valve gradients: $\mathbf{g}_{\ell,\text{RV}} = w_{\text{RV}} \nabla\phi_{\text{RV,tv}} + (1 - w_{\text{RV}})\nabla\phi_{\text{RV,pv}}$
 
-**Key features**:
-- Handles complex geometries with outflow tracts
-- Valve-specific angle definitions
-- Smooth transitions between ventricular and outflow tract regions
-- More anatomically accurate for complete heart models
+2. **Construct LV and RV basis** for septum:
+   - $\mathbf{Q}_{\text{LV,sep}} = \text{axis}(\mathbf{g}_{\ell,\text{LV}}, \nabla\phi_{\text{LV,trans}})$
+   - $\mathbf{Q}_{\text{RV,sep}} = \text{axis}(\mathbf{g}_{\ell,\text{RV}}, \nabla\phi_{\text{RV,trans}})$
+
+3. **Rotate by septum angles**:
+   - $\mathbf{Q}_{\text{LV,septum}} = \text{orient\_rodrigues}(\mathbf{Q}_{\text{LV,sep}}, \alpha_{\text{septum}}, \beta_{\text{septum}})$
+   - $\mathbf{Q}_{\text{RV,septum}} = \text{orient\_rodrigues}(\mathbf{Q}_{\text{RV,sep}}, \alpha_{\text{septum}}, \beta_{\text{septum}})$
+
+4. **Construct LV and RV basis** for wall:
+   - $\mathbf{Q}_{\text{LV,wall}}^0 = \text{axis}(\mathbf{g}_{\ell,\text{LV}}, \nabla\phi_{\text{LV,trans}})$
+   - $\mathbf{Q}_{\text{RV,wall}}^0 = \text{axis}(\mathbf{g}_{\ell,\text{RV}}, \nabla\phi_{\text{RV,trans}})$
+
+5. **Rotate by wall angles**:
+   - $\mathbf{Q}_{\text{LV,wall}} = \text{orient\_rodrigues}(\mathbf{Q}_{\text{LV,wall}}^0, \alpha_{\text{wall,LV}}, \beta_{\text{wall,LV}})$
+   - $\mathbf{Q}_{\text{RV,wall}} = \text{orient\_rodrigues}(\mathbf{Q}_{\text{RV,wall}}^0, \alpha_{\text{wall,RV}}, \beta_{\text{wall,RV}})$
+
+6. **Create discontinuous septal basis**:
+   $$\mathbf{Q}_{\text{sep}} = \begin{cases}
+   \mathbf{Q}_{\text{RV,septum}} & \text{if } \phi_{\text{BiV}} \leq 0.5 \\
+   \mathbf{Q}_{\text{LV,septum}} & \text{if } \phi_{\text{BiV}} > 0.5
+   \end{cases}$$
+
+7. **Interpolate epicardial basis**:
+   - $\mathbf{Q}_{\text{epi}} = \text{interpolate\_basis}(\mathbf{Q}_{\text{RV,wall}}, \mathbf{Q}_{\text{LV,wall}}, \phi_{\text{BiV}})$
+
+8. **Interpolate from endocardium to epicardium**:
+   - $\mathbf{Q} = \text{interpolate\_basis}(\mathbf{Q}_{\text{sep}}, \mathbf{Q}_{\text{epi}}, \phi_{\text{epi,trans}})$
+   - Extract: $\mathbf{f} = \mathbf{Q}[:, 0]$, $\mathbf{n} = \mathbf{Q}[:, 1]$, $\mathbf{s} = \mathbf{Q}[:, 2]$

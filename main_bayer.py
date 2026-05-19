@@ -12,83 +12,112 @@ The script supports command-line arguments for customization of mesh paths,
 output directories, and solver executables.
 """
 
-import os
 import argparse
-import src.FibGen as fg
+import os
+import pyvista as pv
+from src.LaplaceSolver import LaplaceSolver
+from src.FibGen import FibGenBayer
+from src.SurfaceNames import SurfaceName
+from src.SurfaceUtils import generate_epi_apex
 from time import time
 
-###########################################################
-############  USER INPUTS  ################################
-###########################################################
 
-run_flag = False
-svfsi_exec = "svmultiphysics "
+if __name__ == "__main__":
 
-mesh_path = "example/truncated/VOLUME.vtu"
-surfaces_dir = None  # default computed relative to mesh_path below
-outdir = "example/truncated/output_b"
+    ###########################################################
+    ############  USER INPUTS  ################################
+    ###########################################################
 
-surface_names = {'epi': 'EPI.vtp',
-                 'epi_apex': 'EPI_APEX.vtp',    # New surface
-                 'base': 'BASE.vtp',
-                 'endo_lv': 'LV.vtp',
-                 'endo_rv': 'RV.vtp'}
+    run_flag = True
+    svfsi_exec = "svmultiphysics "
 
-# Parameters for the Bayer et al. method https://doi.org/10.1007/s10439-012-0593-5. 
-params = {
-    "ALFA_END": 60.0,
-    "ALFA_EPI": -60.0,
-    "BETA_END": 0.0,
-    "BETA_EPI": -0.0,
-}
+    mesh_path = "example/truncated/VOLUME.vtu"
+    outdir = "example/truncated/output_bayer"
+    surfaces_dir = 'example/truncated/mesh-surfaces'
+                    
+    # Parameters for the Bayer et al. method https://doi.org/10.1007/s10439-012-0593-5. 
+    params = {
+        "ALFA_END": 60.0,
+        "ALFA_EPI": -60.0,
+        "BETA_END": 20.0,
+        "BETA_EPI": -20.0,
+    }
 
 
-###########################################################
-############  FIBER GENERATION  ###########################
-###########################################################
+    ###########################################################
+    ############  FIBER GENERATION  ###########################
+    ###########################################################
 
-# Optional CLI overrides
-parser = argparse.ArgumentParser(description="Generate fibers using the Bayer method.")
-parser.add_argument("--svfsi-exec", default=svfsi_exec, help="svMultiPhysics executable/command (default: %(default)s)")
-parser.add_argument("--mesh-path", default=mesh_path, help="Path to the volumetric mesh .vtu (default: %(default)s)")
-parser.add_argument(
-    "--surfaces-dir",
-    default=surfaces_dir,
-    help="Directory containing mesh surfaces; default: <parent of mesh_path>/mesh-surfaces",
-)
-parser.add_argument("--outdir", default=outdir, help="Output directory (default: %(default)s)")
-args = parser.parse_args()
+    # Optional CLI overrides
+    parser = argparse.ArgumentParser(description="Generate fibers using the Bayer method.")
+    parser.add_argument("--svfsi-exec", default=svfsi_exec, help="svMultiPhysics executable/command (default: %(default)s)")
+    parser.add_argument("--mesh-path", default=mesh_path, help="Path to the volumetric mesh .vtu (default: %(default)s)")
+    parser.add_argument(
+        "--surfaces-dir",
+        default=surfaces_dir,
+        help="Directory containing mesh surfaces; default: <parent of mesh_path>/mesh-surfaces",
+    )
+    parser.add_argument("--outdir", default=outdir, help="Output directory (default: %(default)s)")
+    args = parser.parse_args()
 
-svfsi_exec = args.svfsi_exec
-if not svfsi_exec.endswith(" "):
-    svfsi_exec = svfsi_exec + " "
+    svfsi_exec = args.svfsi_exec
+    if not svfsi_exec.endswith(" "):
+        svfsi_exec = svfsi_exec + " "
 
-mesh_path = args.mesh_path
-outdir = args.outdir
+    mesh_path = args.mesh_path
+    outdir = args.outdir
 
-# Make sure the paths are full paths
-mesh_path = os.path.abspath(mesh_path)
-outdir = os.path.abspath(outdir)
+    if args.surfaces_dir is None:
+        surfaces_dir = os.path.join(os.path.dirname(mesh_path), "mesh-surfaces")
+    else:
+        surfaces_dir = os.path.abspath(args.surfaces_dir)
 
-if args.surfaces_dir is None:
-    surfaces_dir = os.path.join(os.path.dirname(mesh_path), "mesh-surfaces")
-else:
-    surfaces_dir = os.path.abspath(args.surfaces_dir)
+    # Make sure the paths are full paths
+    mesh_path = os.path.abspath(mesh_path)
+    outdir = os.path.abspath(outdir)
+    surfaces_dir = os.path.abspath(surfaces_dir)
 
-start = time()
-fg.generate_epi_apex(surfaces_dir, surface_names)
+    # Define surface paths
+    surface_paths = {SurfaceName.EPICARDIUM: f'{surfaces_dir}/EPI.vtp',
+                    SurfaceName.EPICARDIUM_APEX: f'{surfaces_dir}/EPI_APEX.vtp',
+                    SurfaceName.BASE: f'{surfaces_dir}/BASE.vtp',
+                    SurfaceName.ENDOCARDIUM_LV: f'{surfaces_dir}/LV.vtp',
+                    SurfaceName.ENDOCARDIUM_RV: f'{surfaces_dir}/RV.vtp'}
+    
+    # Create output directory if needed
+    os.makedirs(outdir, exist_ok=True)
+    
+    # Check if the EPICARDIUM_APEX surface exists; if not create it
+    start = time()
+    if not os.path.exists(surface_paths[SurfaceName.EPICARDIUM_APEX]):
+        print("Generating EPICARDIUM_APEX surface...")
+        generate_epi_apex(surface_paths)
+        
+    # Initialize Laplace solver
+    solver = LaplaceSolver(mesh_path, surface_paths, svfsi_exec)
 
-# Run the Laplace solver
-if run_flag:
-    template_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "src", "templates", "solver_bayer.xml")
-    laplace_results_file = fg.runLaplaceSolver(surfaces_dir, mesh_path, svfsi_exec, template_file, outdir, surface_names)
-laplace_results_file = outdir + '/result_001.vtu'
+    # Run the Laplace solver
+    if run_flag:
+        print("Running Laplace solver...")
+        laplace_results_file = solver.run("bayer", outdir)
+    else:
+        laplace_results_file = os.path.join(outdir, 'result_001.vtu')
 
-# Generate the fiber directions
-result_mesh = fg.generate_fibers_BiV_Bayer_cells(outdir, laplace_results_file, params, return_angles=True, return_intermediate=True)
+    # Initialize fiber generator
+    print("\nGenerating fibers using Bayer method...")
+    fib_gen = FibGenBayer()
 
-print(f"generate fibers (Bayer method) elapsed time: {time() - start:.3f} s")
+    # Load Laplace results
+    fib_gen.load_laplace_results(laplace_results_file)
 
-# Optional, save the result mesh with intermediate field and angles for checking
-result_mesh_path = os.path.join(outdir, "results_bayer.vtu")
-result_mesh.save(result_mesh_path)
+    # Generate fiber directions
+    F, S, T = fib_gen.generate_fibers(params)
+    print(f"generate fibers (Bayer method) elapsed time: {time() - start:.3f} s")
+    
+    # Write fibers to output directory
+    fib_gen.write_fibers(outdir)
+
+    # Save the result mesh
+    result_mesh_path = os.path.join(outdir, "results_bayer.vtu")
+    fib_gen.mesh.save(result_mesh_path)
+    print(f"\nResults saved to: {result_mesh_path}")

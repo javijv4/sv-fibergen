@@ -1,3 +1,15 @@
+Metadata-Version: 2.4
+Name: sv-fibergen
+Version: 0.1.0
+Summary: Python + svMultiPhysics codes for biventricular fiber generation
+License: MIT
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: numpy>=1.20.0
+Requires-Dist: pyvista>=0.38.0
+Requires-Dist: scipy>=1.7.0
+Requires-Dist: matplotlib>=3.4.0
+
 # SV-fibergen
 Python + svMultiPhysics codes for fiber generation. Two methods are implemented:
 * Bayer et al. (2012). [link](https://doi.org/10.1007/s10439-012-0593-5)
