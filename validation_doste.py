@@ -2,6 +2,7 @@
 # -*-coding:utf-8 -*-
 
 import os
+import argparse
 import numpy as np
 import pyvista as pv
 
@@ -70,6 +71,11 @@ if __name__ == "__main__":
 
     outdir = "example/ot/output_doste"
     save_vtu = True
+
+    parser = argparse.ArgumentParser(description="Validate Doste fiber angles against reference fields.")
+    parser.add_argument("--outdir", default=outdir, help="Directory containing Laplace/fiber outputs (default: %(default)s)")
+    args = parser.parse_args()
+    outdir = args.outdir
 
     params_zero = {
         'AENDORV': 0,

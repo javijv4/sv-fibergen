@@ -9,7 +9,11 @@ including generating epicardial apex surfaces.
 import os
 import numpy as np
 import pyvista as pv
-from SurfaceNames import SurfaceName
+
+try:
+    from .SurfaceNames import SurfaceName
+except ImportError:  # Fallback for direct script-style imports
+    from SurfaceNames import SurfaceName
 
 
 def get_normal_plane_svd(points):

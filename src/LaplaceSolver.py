@@ -12,9 +12,15 @@ Supports both:
 """
 
 import os
+import shlex
+import subprocess
 from xml.etree import ElementTree as ET
 from xml.dom import minidom
-from SurfaceNames import SurfaceName
+
+try:
+    from .SurfaceNames import SurfaceName
+except ImportError:  # Fallback for direct script-style imports
+    from SurfaceNames import SurfaceName
 
 
 class LaplaceSolver:
@@ -420,11 +426,13 @@ class LaplaceSolver:
         if delete_xml:
             os.remove(xml_path)
         
-        # Run solver
+        # Run solver with argument-safe subprocess invocation so paths with
+        # spaces/parentheses do not get misparsed by the shell.
+        cmd = shlex.split(self.exec_svmultiphysics) + [xml_path]
         print("   Running svMultiPhysics solver")
-        print(f"   {self.exec_svmultiphysics + xml_path}")
-        os.system(self.exec_svmultiphysics + xml_path)
-        
+        print(f"   {' '.join(shlex.quote(arg) for arg in cmd)}")
+        subprocess.run(cmd, check=True)
+
         return os.path.join(output_dir, 'result_001.vtu')
     
     def validate_surfaces(self, method):

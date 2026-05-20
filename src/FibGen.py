@@ -158,12 +158,12 @@ class FibGen:
         """Apply alpha and beta rotations to orthogonal matrices.
         
         Rotates Q by alpha about the z-axis (transmural) and then
-        by beta about the y-axis (longitudinal direction).
+        by beta about the x-axis (circumferential direction).
         
         Args:
             Q: Array of shape (N, 3, 3) containing orthogonal matrices.
             alpha: Array of shape (N,) with rotation angles (radians) about z-axis.
-            beta: Array of shape (N,) with rotation angles (radians) about y-axis.
+            beta: Array of shape (N,) with rotation angles (radians) about x-axis.
         
         Returns:
             np.ndarray: Array of shape (N, 3, 3) containing rotated matrices.
@@ -184,12 +184,12 @@ class FibGen:
         Ra[:, 1, 1] = ca
         Ra[:, 2, 2] = 1.0
         
-        # Rotation about y-axis (Rb)
+        # Rotation about x-axis (Rb)
         Rb = np.zeros((ne, 3, 3), dtype=float)
-        Rb[:, 0, 0] = cb
-        Rb[:, 0, 2] = sb
-        Rb[:, 1, 1] = 1.0
-        Rb[:, 2, 0] = -sb
+        Rb[:, 0, 0] = 1.0
+        Rb[:, 1, 1] = cb
+        Rb[:, 1, 2] = -sb
+        Rb[:, 2, 1] = sb
         Rb[:, 2, 2] = cb
         
         # Compose rotations and apply to Q
@@ -426,25 +426,25 @@ class FibGenBayer(FibGen):
             raise ValueError("Must call load_laplace_results() first")
         
         # Convert parameters to radians (consistent with Doste method)
-        params = {k: np.deg2rad(v) for k, v in params.items()}
+        params_rad = {k: np.deg2rad(v) for k, v in params.items()}
                 
         print("   Computing fiber directions at cells")
         
         # Interpolation factor between LV and RV
         d = self.lap['Trans_RV'] / (self.lap['Trans_LV'] + self.lap['Trans_RV'])
-        alfaS = self.calculate_angle(d, params['ALFA_END'], -params['ALFA_END'])
-        betaS = self.calculate_angle(d, params['BETA_END'], -params['BETA_END'])
+        alfaS = self.calculate_angle(d, params_rad['ALFA_END'], -params_rad['ALFA_END'])
+        betaS = self.calculate_angle(d, params_rad['BETA_END'], -params_rad['BETA_END'])
                     
         # Wall angles (interpolated from endo to epi)
-        alfaW = self.calculate_angle(self.lap['Trans_EPI'], params['ALFA_END'], params['ALFA_EPI'])
-        betaW = self.calculate_angle(self.lap['Trans_EPI'], params['BETA_END'], params['BETA_EPI'])
+        alfaW = self.calculate_angle(self.lap['Trans_EPI'], params_rad['ALFA_END'], params_rad['ALFA_EPI'])
+        betaW = self.calculate_angle(self.lap['Trans_EPI'], params_rad['BETA_END'], params_rad['BETA_EPI'])
         
         # Build LV and RV basis
         Q_LV0 = self.axis(self.grad['Long_AB'], -self.grad['Trans_LV'])
-        Q_LV = self.orient_matrix(Q_LV0, alfaS, np.sign(params['BETA_END'])*np.abs(betaS))
+        Q_LV = self.orient_matrix(Q_LV0, alfaS, betaS)
         
         Q_RV0 = self.axis(self.grad['Long_AB'], self.grad['Trans_RV']) 
-        Q_RV = self.orient_matrix(Q_RV0, alfaS, np.sign(params['BETA_END'])*np.abs(betaS))    
+        Q_RV = self.orient_matrix(Q_RV0, alfaS, betaS)    
         
         # Interpolate between LV and RV (endocardial layer)
         Q_END = self.interpolate_basis(Q_LV, Q_RV, d, correct_slerp=correct_slerp)
@@ -468,6 +468,32 @@ class FibGenBayer(FibGen):
         self.mesh.cell_data['fiber'] = F
         self.mesh.cell_data['sheet-normal'] = S
         self.mesh.cell_data['sheet'] = T
+
+        self.mesh.cell_data['alfaS'] = alfaS
+        self.mesh.cell_data['betaS'] = betaS
+        self.mesh.cell_data['alfaW'] = alfaW
+        self.mesh.cell_data['betaW'] = betaW
+        self.mesh.cell_data['f_LV0'] = Q_LV0[:, :, 0]
+        self.mesh.cell_data['n_LV0'] = Q_LV0[:, :, 1]
+        self.mesh.cell_data['s_LV0'] = Q_LV0[:, :, 2]
+        self.mesh.cell_data['f_RV0'] = Q_RV0[:, :, 0]
+        self.mesh.cell_data['n_RV0'] = Q_RV0[:, :, 1]
+        self.mesh.cell_data['s_RV0'] = Q_RV0[:, :, 2]
+        self.mesh.cell_data['f_LV'] = Q_LV[:, :, 0]
+        self.mesh.cell_data['n_LV'] = Q_LV[:, :, 1]
+        self.mesh.cell_data['s_LV'] = Q_LV[:, :, 2]
+        self.mesh.cell_data['f_RV'] = Q_RV[:, :, 0]
+        self.mesh.cell_data['n_RV'] = Q_RV[:, :, 1]
+        self.mesh.cell_data['s_RV'] = Q_RV[:, :, 2]
+        self.mesh.cell_data['f_EPI'] = Q_EPI[:, :, 0]
+        self.mesh.cell_data['n_EPI'] = Q_EPI[:, :, 1]
+        self.mesh.cell_data['s_EPI'] = Q_EPI[:, :, 2]
+        self.mesh.cell_data['f_END'] = Q_END[:, :, 0]
+        self.mesh.cell_data['n_END'] = Q_END[:, :, 1]
+        self.mesh.cell_data['s_END'] = Q_END[:, :, 2]
+
+        self.mesh.save("check.vtu")
+
     
         return F, S, T
         

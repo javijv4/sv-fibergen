@@ -2,6 +2,7 @@
 # -*-coding:utf-8 -*-
 
 import os
+import argparse
 import numpy as np
 import pyvista as pv
 
@@ -46,16 +47,18 @@ def project_to_plane(fiber, vector1, vector2):
     
     return projected_normalized
 
-def calculate_alpha_beta_angles(f, eC, eL, eT):
+
+def calculate_alpha_beta_angles_bayer(f, s, eC, eL, eT):
+
+    beta_dot = np.abs(np.sum(eT * s, axis=1))
+    beta_dot = np.clip(beta_dot, 0, 1)  # Ensure values are within valid range
+    beta_angle = np.rad2deg(np.arccos(beta_dot))
+    sign_beta = - np.sign(np.sum(s * eL, axis=1))
+    beta_angle = beta_angle * sign_beta
+
     # Project fiber to the plane formed by eL and eC
     f_projected = project_to_plane(f, eL, eC)
-
-    beta_dot = np.abs(np.sum(f_projected * f, axis=1))
-    beta_dot = np.clip(beta_dot, 0, 1)  # Ensure values are within valid range
-    abs_beta_angle = np.rad2deg(np.arccos(beta_dot))
-    sign_beta = - np.sign(np.sum(f * eT, axis=1))
-    beta_angle = abs_beta_angle * sign_beta
-
+    
     alpha_dot = np.abs(np.sum(eC * f_projected, axis=1))
     alpha_dot = np.clip(alpha_dot, 0, 1)  # Ensure values are within valid range
     abs_alpha_angle = np.rad2deg(np.arccos(alpha_dot))
@@ -63,8 +66,6 @@ def calculate_alpha_beta_angles(f, eC, eL, eT):
     alpha_angle = abs_alpha_angle * sign_alpha
     
     return alpha_angle, beta_angle, f_projected
-
-
 
 if __name__ == "__main__":
 
@@ -112,7 +113,7 @@ if __name__ == "__main__":
     # Sanity check 1: Only alpha rotation
     f_alpha, n_alpha, s_alpha = fib_gen.generate_fibers(params_alpha)
     ref_alpha_only_a, ref_beta_only_a = fib_gen.get_angle_fields(params_alpha)
-    alpha_only_a, beta_only_a, f_projected = calculate_alpha_beta_angles(f_alpha, eC, eL, eT)
+    alpha_only_a, beta_only_a, f_projected = calculate_alpha_beta_angles_bayer(f_alpha, s_alpha, eC, eL, eT)
 
     if save_vtu:
         fib_gen.mesh.cell_data.clear()
@@ -130,7 +131,7 @@ if __name__ == "__main__":
     # Sanity check 2: Only beta rotation
     f_beta, n_beta, s_beta = fib_gen.generate_fibers(params_beta)
     ref_alpha_only_b, ref_beta_only_b = fib_gen.get_angle_fields(params_beta)
-    alpha_only_b, beta_only_b, f_projected = calculate_alpha_beta_angles(f_beta, eC, eL, eT)
+    alpha_only_b, beta_only_b, f_projected = calculate_alpha_beta_angles_bayer(f_beta, s_beta, eC, eL, eT)
 
     if save_vtu:
         fib_gen.mesh.cell_data.clear()
@@ -149,7 +150,7 @@ if __name__ == "__main__":
     eC, eL, eT = fib_gen.generate_fibers(params_zero)
     f_combined, n_combined, s_combined = fib_gen.generate_fibers(params)
     ref_alpha_combined, ref_beta_combined = fib_gen.get_angle_fields(params)
-    alpha_combined, beta_combined, f_projected = calculate_alpha_beta_angles(f_combined, eC, eL, eT)
+    alpha_combined, beta_combined, f_projected = calculate_alpha_beta_angles_bayer(f_combined, s_combined, eC, eL, eT)
 
     if save_vtu:
         fib_gen.mesh.cell_data.clear()
@@ -167,7 +168,7 @@ if __name__ == "__main__":
     # For comparison, generate fibers using original Bayer method
     eC, eL, eT = fib_gen.generate_fibers(params_zero, correct_slerp=True, flip_rv=False)
     f_og, n_og, s_og = fib_gen.generate_fibers(params, correct_slerp=True, flip_rv=False)
-    alpha_og, beta_og, f_projected = calculate_alpha_beta_angles(f_og, eC, eL, eT)
+    alpha_og, beta_og, f_projected = calculate_alpha_beta_angles_bayer(f_og, s_og, eC, eL, eT)
 
     if save_vtu:
         fib_gen.mesh.cell_data.clear()
@@ -182,7 +183,7 @@ if __name__ == "__main__":
         fib_gen.mesh.cell_data['diff_beta_og'] = beta_og - ref_beta_combined
         fib_gen.mesh.save('example/truncated/validation_bayer_original.vtu')
 
-
+#%%
     # Create figure with correlation plots
     fig, axes = plt.subplots(2, 2, figsize=(8, 7), constrained_layout=True)
     fig.suptitle(r'$\alpha$ and $\beta$ angle correlations', fontsize=16)
